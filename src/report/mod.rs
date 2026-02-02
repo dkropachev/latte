@@ -735,6 +735,17 @@ impl Display for BenchmarkCmp<'_> {
             writeln!(f, "{l}")?;
         }
 
+        // Only show driver latency if present (driver mode only)
+        if self.v1.driver_latency.is_some() || self.v2.map_or(false, |v| v.driver_latency.is_some())
+        {
+            let l = self
+                .line("Driver latency", "ms", |s| {
+                    Quantity::from(s.driver_latency.as_ref().map(|dl| dl.mean)).with_precision(3)
+                })
+                .with_orientation(-1);
+            writeln!(f, "{l}")?;
+        }
+
         let resp_time_percentiles = [
             Percentile::Min,
             Percentile::P25,

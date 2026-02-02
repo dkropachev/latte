@@ -29,7 +29,8 @@ use crate::config::{
 use crate::error::{LatteError, Result};
 use crate::exec::{par_execute, ExecutionOptions};
 use crate::report::{PathAndSummary, Report, RunConfigCmp};
-use crate::scripting::connect::ClusterInfo;
+use crate::ipc::DockerManager;
+use crate::scripting::connect::{connect_ipc, ClusterInfo};
 use crate::scripting::context::Context;
 use crate::stats::histogram::HistogramWriter;
 use crate::stats::{BenchmarkCmp, BenchmarkStats, Recorder};
@@ -43,6 +44,7 @@ use report::table::{Alignment, Table};
 mod config;
 mod error;
 mod exec;
+mod ipc;
 mod report;
 mod scripting;
 mod stats;
@@ -133,11 +135,28 @@ async fn connect(conf: &ConnectionConf) -> Result<(Context, Option<ClusterInfo>)
     Ok((session, cluster_info))
 }
 
+/// Connects to the server via external driver (IPC mode)
+/// Returns the Context, cluster info, and optionally a DockerManager that must be kept alive.
+async fn connect_external(
+    conn_conf: &ConnectionConf,
+    driver_conf: &config::DriverConf,
+) -> Result<(Context, Option<ClusterInfo>, Option<DockerManager>)> {
+    let (session, docker_manager) = connect_ipc(conn_conf, driver_conf).await?;
+    // In IPC mode, we don't have direct access to cluster info
+    // The driver manages the connection
+    Ok((session, None, docker_manager))
+}
+
 /// Runs the `schema` function of the workload script.
 /// Exits with error if the `schema` function is not present or fails.
 async fn schema(conf: SchemaCommand) -> Result<()> {
     let mut program = load_workload_script(&conf.workload, &conf.params)?;
-    let (mut session, _) = connect(&conf.connection).await?;
+    let (mut session, _, _docker_manager) = if conf.driver.is_external() {
+        connect_external(&conf.connection, &conf.driver).await?
+    } else {
+        let (ctx, info) = connect(&conf.connection).await?;
+        (ctx, info, None)
+    };
     if !program.has_schema() {
         eprintln!("error: Function `schema` not found in the workload script.");
         exit(255);
@@ -155,7 +174,12 @@ async fn schema(conf: SchemaCommand) -> Result<()> {
 /// Exits with error if the `load` function is not present or fails.
 async fn load(conf: LoadCommand) -> Result<()> {
     let mut program = load_workload_script(&conf.workload, &conf.params)?;
-    let (mut session, _) = connect(&conf.connection).await?;
+    let (mut session, _, _docker_manager) = if conf.driver.is_external() {
+        connect_external(&conf.connection, &conf.driver).await?
+    } else {
+        let (ctx, info) = connect(&conf.connection).await?;
+        (ctx, info, None)
+    };
 
     if program.has_prepare() {
         eprintln!("info: Preparing...");
@@ -234,7 +258,12 @@ async fn run(conf: RunCommand) -> Result<()> {
         functions.push((function, f.weight))
     }
 
-    let (mut session, cluster_info) = connect(&conf.connection).await?;
+    let (mut session, cluster_info, _docker_manager) = if conf.driver.is_external() {
+        connect_external(&conf.connection, &conf.driver).await?
+    } else {
+        let (ctx, info) = connect(&conf.connection).await?;
+        (ctx, info, None)
+    };
     if let Some(cluster_info) = cluster_info {
         conf.cluster_name = Some(cluster_info.name);
         conf.db_version = Some(cluster_info.db_version);

@@ -1,0 +1,31 @@
+[package]
+name = "latte-driver"
+version = "0.1.0"
+edition = "2021"
+description = "Latte driver-side counterpart for the universal loader IPC channel"
+license = "Apache-2.0"
+
+[dependencies]
+anyhow = "1.0"
+bytes = "1.0.1"
+chrono = "0.4"
+dashmap = "6"
+rust_decimal = "1.0"
+thiserror = "2.0.0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+scylla = { version = "1.4", features = ["openssl-010", "chrono-04"] }
+uuid = "1.8"
+# NOTE: pin the tokio version to be 1.44.2 to align with the main latte binary and avoid
+#       known performance regressions in newer releases.
+tokio = { version = "=1.44.2", features = ["rt-multi-thread", "macros", "net", "signal", "sync", "io-util", "fs"] }
+
+[dev-dependencies]
+tempfile = "3"
+[[bin]]
+name = "latte-driver"
+path = "src/main.rs"
+
+[lib]
+name = "driver_counterpart"
+path = "src/lib.rs"

@@ -1,0 +1,7 @@
+{
+	"InstallScripts" : 
+	[
+		"/extra/scylladb/latte/driver-adapters/cpp-rs-driver/build/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

@@ -1,0 +1,187 @@
+name: Adapter - Java Driver 3
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'driver-adapters/java-driver-3/**'
+      - 'driver-adapters/workloads/**'
+      - '.github/workflows/adapter-java-driver-3.yml'
+  pull_request:
+    paths:
+      - 'driver-adapters/java-driver-3/**'
+      - 'driver-adapters/workloads/**'
+      - '.github/workflows/adapter-java-driver-3.yml'
+
+defaults:
+  run:
+    working-directory: driver-adapters/java-driver-3
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 11
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Check formatting with Spotless
+        run: mvn -B spotless:check
+
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 11
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Run unit tests
+        run: mvn -B test
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 11
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build package
+        run: mvn -B clean package -DskipTests
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: latte-driver-java3
+          path: driver-adapters/java-driver-3/target/latte-driver-java3.jar
+          retention-days: 1
+
+  integration:
+    name: Integration Tests
+    needs: build
+    runs-on: ubuntu-latest
+    services:
+      scylla:
+        image: scylladb/scylla:latest
+        ports:
+          - 9042:9042
+        options: >-
+          --health-cmd "cqlsh -e 'SELECT now() FROM system.local'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 11
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-action@stable
+
+      - name: Cache cargo (latte)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-latte-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-latte-
+
+      - name: Build latte
+        working-directory: .
+        run: cargo build --release
+
+      - name: Download adapter artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: latte-driver-java3
+          path: driver-adapters/java-driver-3/target/
+
+      - name: Run integration tests
+        run: make test-integration
+        env:
+          LATTE_BIN: ${{ github.workspace }}/target/release/latte
+          SCYLLA_CONTACT_POINTS: 127.0.0.1:9042
+
+  benchmark:
+    name: Benchmark Tests
+    needs: build
+    runs-on: ubuntu-latest
+    services:
+      scylla:
+        image: scylladb/scylla:latest
+        ports:
+          - 9042:9042
+        options: >-
+          --health-cmd "cqlsh -e 'SELECT now() FROM system.local'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 11
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-action@stable
+
+      - name: Cache cargo (latte)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-latte-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-latte-
+
+      - name: Build latte
+        working-directory: .
+        run: cargo build --release
+
+      - name: Download adapter artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: latte-driver-java3
+          path: driver-adapters/java-driver-3/target/
+
+      - name: Run benchmark tests
+        run: make test-benchmark
+        env:
+          LATTE_BIN: ${{ github.workspace }}/target/release/latte
+          SCYLLA_CONTACT_POINTS: 127.0.0.1:9042
+          BENCHMARK_DURATION: 5s

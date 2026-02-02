@@ -1,20 +1,25 @@
 use crate::config::{RetryInterval, ValidationStrategy};
 use crate::error::LatteError;
+use crate::ipc::{QueryResult as IpcQueryResult, SessionId, SessionManager};
 use crate::scripting::bind::to_scylla_query_params;
 use crate::scripting::cass_error::{CassError, CassErrorKind};
 use crate::scripting::connect::ClusterInfo;
+use crate::scripting::cql_types::{Float32, Int16, Int32, Int8, Uuid};
 use crate::stats::session::SessionStats;
 use chrono::Utc;
+use dashmap::DashSet;
 use itertools::enumerate;
 use once_cell::sync::Lazy;
 use rand::prelude::ThreadRng;
 use rand::random;
 use regex::Regex;
+use rune::alloc::clone::TryClone;
 use rune::alloc::vec::Vec as RuneAllocVec;
 use rune::alloc::String as RuneString;
 use rune::runtime::{Object, OwnedTuple, Shared, Vec as RuneVec};
 use rune::{Any, Value};
 use scylla::client::session::Session;
+use scylla::frame::types::Consistency;
 use scylla::response::PagingState;
 use scylla::statement::batch::{Batch, BatchType};
 use scylla::statement::prepared::PreparedStatement;
@@ -475,6 +480,15 @@ pub struct Context {
     #[rune(get)]
     pub data: Value,
     pub rng: ThreadRng,
+
+    // IPC mode fields for universal loader
+    ipc_session_manager: Option<Arc<SessionManager>>,
+    ipc_session_id: SessionId,
+    /// Keys of statements prepared via IPC (to track what's prepared on the driver side).
+    /// Uses DashSet for lock-free concurrent access across parallel workers.
+    ipc_prepared_keys: Arc<DashSet<String>>,
+    /// Default consistency level for IPC mode queries.
+    ipc_consistency: Consistency,
 }
 
 // Needed, because Rune `Value` is !Send, as it may contain some internal pointers.
@@ -511,7 +525,50 @@ impl Context {
             preferred_rack,
             data: Value::Object(Shared::new(Object::new()).unwrap()),
             rng: rand::thread_rng(),
+            ipc_session_manager: None,
+            ipc_session_id: 0,
+            ipc_prepared_keys: Arc::new(DashSet::new()),
+            ipc_consistency: Consistency::LocalQuorum,
         }
+    }
+
+    /// Create a new Context in IPC mode for the universal loader.
+    pub fn new_ipc(
+        session_manager: Arc<SessionManager>,
+        session_id: SessionId,
+        page_size: u64,
+        preferred_datacenter: String,
+        preferred_rack: String,
+        retry_number: u64,
+        retry_interval: RetryInterval,
+        validation_strategy: ValidationStrategy,
+        consistency: Consistency,
+    ) -> Context {
+        Context {
+            start_time: TryLock::new(Instant::now()),
+            session: None,
+            page_size,
+            statements: HashMap::new(),
+            stats: TryLock::new(SessionStats::new()),
+            retry_number,
+            retry_interval,
+            validation_strategy,
+            partition_row_presets: HashMap::new(),
+            load_cycle_count: 0,
+            preferred_datacenter,
+            preferred_rack,
+            data: Value::Object(Shared::new(Object::new()).unwrap()),
+            rng: rand::thread_rng(),
+            ipc_session_manager: Some(session_manager),
+            ipc_session_id: session_id,
+            ipc_prepared_keys: Arc::new(DashSet::new()),
+            ipc_consistency: consistency,
+        }
+    }
+
+    /// Returns true if this context is operating in IPC mode.
+    pub fn is_ipc_mode(&self) -> bool {
+        self.ipc_session_manager.is_some()
     }
 
     /// Clones the context for use by another thread.
@@ -536,6 +593,10 @@ impl Context {
             data: deserialized,
             start_time: TryLock::new(*self.start_time.try_lock().unwrap()),
             rng: rand::thread_rng(),
+            ipc_session_manager: self.ipc_session_manager.clone(),
+            ipc_session_id: self.ipc_session_id,
+            ipc_prepared_keys: Arc::clone(&self.ipc_prepared_keys),
+            ipc_consistency: self.ipc_consistency,
         })
     }
 
@@ -843,6 +904,23 @@ impl Context {
 
     /// Prepares a statement and stores it in an internal statement map for future use.
     pub async fn prepare(&mut self, key: &str, cql: &str) -> Result<(), CassError> {
+        // IPC mode: delegate to the driver counterpart
+        if let Some(ref mgr) = self.ipc_session_manager {
+            mgr.prepare(self.ipc_session_id, key, cql)
+                .await
+                .map_err(|e| {
+                    self.stats
+                        .try_lock()
+                        .unwrap()
+                        .record_ipc_error(&e.to_string());
+                    CassError(CassErrorKind::Error(format!("IPC prepare failed: {}", e)))
+                })?;
+            // Lock-free insert into prepared keys set
+            self.ipc_prepared_keys.insert(key.to_string());
+            return Ok(());
+        }
+
+        // Direct mode: use the scylla session
         match &self.session {
             Some(session) => {
                 let statement = session
@@ -957,6 +1035,22 @@ impl Context {
         custom_err_msg: Option<&str>,
         process_and_return_data: bool,
     ) -> Result<Value, CassError> {
+        // IPC mode: delegate to the driver counterpart
+        if let Some(ref mgr) = self.ipc_session_manager {
+            return self
+                ._execute_ipc(
+                    mgr,
+                    cql,
+                    key,
+                    params,
+                    expected_rows_num_min,
+                    expected_rows_num_max,
+                    custom_err_msg,
+                    process_and_return_data,
+                )
+                .await;
+        }
+
         let session = match &self.session {
             Some(session) => session,
             None => {
@@ -1151,6 +1245,440 @@ impl Context {
         Err(CassError::query_retries_exceeded(self.retry_number))
     }
 
+    /// IPC mode execution helper.
+    #[allow(clippy::too_many_arguments)]
+    async fn _execute_ipc(
+        &self,
+        mgr: &Arc<SessionManager>,
+        cql: Option<&str>,
+        key: Option<&str>,
+        params: Option<Value>,
+        expected_rows_num_min: Option<u64>,
+        expected_rows_num_max: Option<u64>,
+        _custom_err_msg: Option<&str>,
+        process_and_return_data: bool,
+    ) -> Result<Value, CassError> {
+        if (cql.is_some() && key.is_some()) || (cql.is_none() && key.is_none()) {
+            return Err(CassError(CassErrorKind::Error(
+                "Either 'cql' or 'key' is allowed, not both".to_string(),
+            )));
+        }
+
+        // Convert params to CqlValue list for IPC
+        let cql_params: Vec<CqlValue> = match params {
+            Some(ref p) => self.rune_value_to_cql_values(p)?,
+            None => vec![],
+        };
+
+        let start_time = self.stats.try_lock().unwrap().start_request();
+
+        let (result, driver_latency) = if let Some(key) = key {
+            // Execute prepared statement (lock-free check)
+            if !self.ipc_prepared_keys.contains(key) {
+                return Err(CassError(CassErrorKind::PreparedStatementNotFound(
+                    key.to_string(),
+                )));
+            }
+            mgr.execute(self.ipc_session_id, key, &cql_params, self.ipc_consistency)
+                .await
+                .map_err(|e| {
+                    self.stats
+                        .try_lock()
+                        .unwrap()
+                        .record_ipc_error(&e.to_string());
+                    CassError(CassErrorKind::Error(format!("IPC execute failed: {}", e)))
+                })?
+        } else {
+            // Execute ad-hoc query
+            let query = cql.expect("cql must be present");
+            mgr.query(self.ipc_session_id, query, self.ipc_consistency)
+                .await
+                .map_err(|e| {
+                    self.stats
+                        .try_lock()
+                        .unwrap()
+                        .record_ipc_error(&e.to_string());
+                    CassError(CassErrorKind::Error(format!("IPC query failed: {}", e)))
+                })?
+        };
+
+        let duration = Instant::now() - start_time;
+
+        // Convert IPC result to Rune Value
+        match result {
+            IpcQueryResult::Void => {
+                self.stats.try_lock().unwrap().complete_request_simple(
+                    duration,
+                    driver_latency,
+                    Some(0),
+                );
+                Ok(Value::Vec(Shared::new(RuneVec::new())?))
+            }
+            IpcQueryResult::Rows { columns, rows } => {
+                let rows_num = rows.len() as u64;
+                self.stats.try_lock().unwrap().complete_request_simple(
+                    duration,
+                    driver_latency,
+                    Some(rows_num),
+                );
+
+                // Validation if requested
+                if let (Some(min), Some(max)) = (expected_rows_num_min, expected_rows_num_max) {
+                    if rows_num < min || rows_num > max {
+                        return Err(CassError(CassErrorKind::Error(format!(
+                            "Expected {} to {} rows, got {}",
+                            min, max, rows_num
+                        ))));
+                    }
+                }
+
+                if !process_and_return_data {
+                    return Ok(Value::Vec(Shared::new(RuneVec::new())?));
+                }
+
+                // Pre-convert column names to RuneStrings once (avoids allocation per row)
+                let rune_col_names: Vec<RuneString> = columns
+                    .iter()
+                    .map(|c| {
+                        RuneString::try_from(c.name.clone()).expect("Failed to create RuneString")
+                    })
+                    .collect();
+
+                // Convert rows to Rune values
+                let mut rune_rows = RuneVec::new();
+                for row in rows {
+                    let mut row_obj = Object::new();
+                    for (i, col_value) in row.iter().enumerate() {
+                        let rune_val = cql_value_to_rune_value(col_value.as_ref())?;
+                        // Clone the pre-computed column name (cheaper than re-allocating)
+                        let col_name = rune_col_names[i].try_clone().map_err(|_| {
+                            CassError(CassErrorKind::Error(
+                                "Failed to clone column name".to_string(),
+                            ))
+                        })?;
+                        row_obj.insert(col_name, rune_val).map_err(|_| {
+                            CassError(CassErrorKind::Error(
+                                "Failed to insert column into row object".to_string(),
+                            ))
+                        })?;
+                    }
+                    rune_rows
+                        .push(Value::Object(Shared::new(row_obj).map_err(|_| {
+                            CassError(CassErrorKind::Error(
+                                "Failed to create shared row object".to_string(),
+                            ))
+                        })?))
+                        .map_err(|_| {
+                            CassError(CassErrorKind::Error(
+                                "Failed to push row to result vector".to_string(),
+                            ))
+                        })?;
+                }
+
+                Ok(Value::Vec(Shared::new(rune_rows).map_err(|_| {
+                    CassError(CassErrorKind::Error(
+                        "Failed to create shared result vector".to_string(),
+                    ))
+                })?))
+            }
+            IpcQueryResult::SchemaChange { .. } => {
+                self.stats.try_lock().unwrap().complete_request_simple(
+                    duration,
+                    driver_latency,
+                    Some(0),
+                );
+                Ok(Value::Vec(Shared::new(RuneVec::new())?))
+            }
+        }
+    }
+
+    /// Convert Rune Value to CqlValue list for IPC.
+    fn rune_value_to_cql_values(&self, value: &Value) -> Result<Vec<CqlValue>, CassError> {
+        let mut result = Vec::new();
+
+        match value {
+            Value::Vec(shared_vec) => {
+                let vec = shared_vec.borrow_ref().map_err(|_| {
+                    CassError(CassErrorKind::Error("Failed to borrow vec".to_string()))
+                })?;
+                for item in vec.iter() {
+                    result.push(self.rune_value_to_cql_value(item)?);
+                }
+            }
+            Value::Tuple(shared_tuple) => {
+                let tuple = shared_tuple.borrow_ref().map_err(|_| {
+                    CassError(CassErrorKind::Error("Failed to borrow tuple".to_string()))
+                })?;
+                for item in tuple.iter() {
+                    result.push(self.rune_value_to_cql_value(item)?);
+                }
+            }
+            _ => {
+                result.push(self.rune_value_to_cql_value(value)?);
+            }
+        }
+
+        Ok(result)
+    }
+
+    /// Convert a single Rune Value to CqlValue.
+    fn rune_value_to_cql_value(&self, value: &Value) -> Result<CqlValue, CassError> {
+        match value {
+            Value::Integer(i) => Ok(CqlValue::BigInt(*i)),
+            Value::Float(f) => Ok(CqlValue::Double(*f)),
+            Value::Bool(b) => Ok(CqlValue::Boolean(*b)),
+            Value::Byte(b) => Ok(CqlValue::Int(*b as i32)),
+            Value::String(s) => {
+                let borrowed = s.borrow_ref().map_err(|_| {
+                    CassError(CassErrorKind::Error("Failed to borrow string".to_string()))
+                })?;
+                Ok(CqlValue::Text(borrowed.as_str().to_string()))
+            }
+            Value::Bytes(b) => {
+                let borrowed = b.borrow_ref().map_err(|_| {
+                    CassError(CassErrorKind::Error("Failed to borrow bytes".to_string()))
+                })?;
+                Ok(CqlValue::Blob(borrowed.to_vec()))
+            }
+            Value::Option(opt) => {
+                let borrowed = opt.borrow_ref().map_err(|_| {
+                    CassError(CassErrorKind::Error("Failed to borrow option".to_string()))
+                })?;
+                match &*borrowed {
+                    Some(inner) => self.rune_value_to_cql_value(inner),
+                    None => Ok(CqlValue::Empty),
+                }
+            }
+            Value::Vec(shared_vec) => {
+                // Vec can represent either:
+                // - Vec<f32> (Vector) - if elements are floats
+                // - Vec<(K, V)> (Map) - if elements are 2-tuples
+                // - Vec<CqlValue> (List) - for other types including integers
+                // Note: Empty Vec defaults to Blob for compatibility
+                let vec = shared_vec.borrow_ref().map_err(|_| {
+                    CassError(CassErrorKind::Error("Failed to borrow vec".to_string()))
+                })?;
+
+                if vec.is_empty() {
+                    // Empty vec - default to empty blob (for compatibility with blob columns)
+                    return Ok(CqlValue::Blob(Vec::new()));
+                }
+
+                // Check first element to determine the type
+                match vec.first() {
+                    Some(Value::Float(_)) => {
+                        // Vec of floats -> CqlValue::Vector
+                        let mut elements = Vec::with_capacity(vec.len());
+                        for item in vec.iter() {
+                            match item {
+                                Value::Float(f) => {
+                                    elements.push(CqlValue::Float(*f as f32));
+                                }
+                                _ => {
+                                    return Err(CassError(CassErrorKind::Error(
+                                        "Vector contains mixed types".to_string(),
+                                    )))
+                                }
+                            }
+                        }
+                        Ok(CqlValue::Vector(elements))
+                    }
+                    Some(Value::Byte(_)) | Some(Value::Integer(_)) => {
+                        // Vec of bytes/integers could be:
+                        // - Blob: if ALL elements are bytes or small integers (0-255)
+                        // - List: otherwise (treat as integer list)
+                        //
+                        // We need to check all elements to decide, not just the first one,
+                        // because Rune may represent small integers as Value::Byte.
+                        let all_bytes_or_small_ints = vec.iter().all(|item| match item {
+                            Value::Byte(_) => true,
+                            Value::Integer(i) => *i >= 0 && *i <= 255,
+                            _ => false,
+                        });
+
+                        // Only treat as Blob if explicitly from Value::Bytes or ALL are small
+                        // For regular integer lists (like [1, 2, 3]), always use List
+                        let has_any_large_int = vec.iter().any(|item| match item {
+                            Value::Integer(i) => *i > 255 || *i < 0,
+                            _ => false,
+                        });
+
+                        if all_bytes_or_small_ints && !has_any_large_int && vec.iter().all(|item| matches!(item, Value::Byte(_))) {
+                            // Only if ALL elements are Value::Byte (from latte::blob)
+                            let mut bytes = Vec::with_capacity(vec.len());
+                            for item in vec.iter() {
+                                if let Value::Byte(b) = item {
+                                    bytes.push(*b);
+                                }
+                            }
+                            Ok(CqlValue::Blob(bytes))
+                        } else {
+                            // Treat as integer List
+                            // Check if all values fit in i32 range (use Int) or need i64 (use BigInt)
+                            let all_fit_i32 = vec.iter().all(|item| match item {
+                                Value::Integer(i) => *i >= i32::MIN as i64 && *i <= i32::MAX as i64,
+                                Value::Byte(_) => true, // Bytes always fit in i32
+                                _ => true,
+                            });
+
+                            let mut elements = Vec::with_capacity(vec.len());
+                            for item in vec.iter() {
+                                match item {
+                                    Value::Integer(i) => {
+                                        if all_fit_i32 {
+                                            elements.push(CqlValue::Int(*i as i32));
+                                        } else {
+                                            elements.push(CqlValue::BigInt(*i));
+                                        }
+                                    }
+                                    Value::Byte(b) => {
+                                        // Convert byte to Int
+                                        elements.push(CqlValue::Int(*b as i32));
+                                    }
+                                    _ => {
+                                        return Err(CassError(CassErrorKind::Error(
+                                            "List contains mixed types".to_string(),
+                                        )))
+                                    }
+                                }
+                            }
+                            Ok(CqlValue::List(elements))
+                        }
+                    }
+                    Some(Value::Vec(_)) => {
+                        // Nested vec -> CqlValue::List (e.g., list<vector<float, N>>)
+                        let mut elements = Vec::with_capacity(vec.len());
+                        for item in vec.iter() {
+                            elements.push(self.rune_value_to_cql_value(item)?);
+                        }
+                        Ok(CqlValue::List(elements))
+                    }
+                    Some(Value::Tuple(first_tuple)) => {
+                        // Vec of tuples -> CqlValue::Map if all are 2-tuples
+                        let first_borrowed = first_tuple.borrow_ref().map_err(|_| {
+                            CassError(CassErrorKind::Error(
+                                "Failed to borrow tuple".to_string(),
+                            ))
+                        })?;
+                        if first_borrowed.len() == 2 {
+                            // 2-tuples -> Map
+                            let mut map_entries = Vec::with_capacity(vec.len());
+                            for item in vec.iter() {
+                                if let Value::Tuple(tuple) = item {
+                                    let tuple_ref = tuple.borrow_ref().map_err(|_| {
+                                        CassError(CassErrorKind::Error(
+                                            "Failed to borrow tuple".to_string(),
+                                        ))
+                                    })?;
+                                    if tuple_ref.len() != 2 {
+                                        return Err(CassError(CassErrorKind::Error(
+                                            "Map entries must be 2-tuples".to_string(),
+                                        )));
+                                    }
+                                    let key = self.rune_value_to_cql_value(tuple_ref.first().unwrap())?;
+                                    let value = self.rune_value_to_cql_value(tuple_ref.last().unwrap())?;
+                                    map_entries.push((key, value));
+                                } else {
+                                    return Err(CassError(CassErrorKind::Error(
+                                        "Mixed types in map vec".to_string(),
+                                    )));
+                                }
+                            }
+                            Ok(CqlValue::Map(map_entries))
+                        } else {
+                            // Non-2-tuples -> List of Tuples
+                            let mut elements = Vec::with_capacity(vec.len());
+                            for item in vec.iter() {
+                                elements.push(self.rune_value_to_cql_value(item)?);
+                            }
+                            Ok(CqlValue::List(elements))
+                        }
+                    }
+                    _ => {
+                        // Other types -> try to convert each element
+                        let mut elements = Vec::with_capacity(vec.len());
+                        for item in vec.iter() {
+                            elements.push(self.rune_value_to_cql_value(item)?);
+                        }
+                        Ok(CqlValue::List(elements))
+                    }
+                }
+            }
+            Value::Tuple(shared_tuple) => {
+                // CQL tuple type
+                let tuple = shared_tuple.borrow_ref().map_err(|_| {
+                    CassError(CassErrorKind::Error("Failed to borrow tuple".to_string()))
+                })?;
+                let mut elements = Vec::with_capacity(tuple.len());
+                for item in tuple.iter() {
+                    let cql_val = self.rune_value_to_cql_value(item)?;
+                    elements.push(Some(cql_val));
+                }
+                Ok(CqlValue::Tuple(elements))
+            }
+            Value::Any(obj) => {
+                let obj = obj.borrow_ref().map_err(|_| {
+                    CassError(CassErrorKind::Error("Failed to borrow Any value".to_string()))
+                })?;
+                let h = obj.type_hash();
+                if h == Uuid::type_hash() {
+                    let uuid: &Uuid = obj.downcast_borrow_ref().ok_or_else(|| {
+                        CassError(CassErrorKind::Error("Failed to downcast to Uuid".to_string()))
+                    })?;
+                    Ok(CqlValue::Uuid(uuid.0))
+                } else if h == Int8::type_hash() {
+                    let int8: &Int8 = obj.downcast_borrow_ref().ok_or_else(|| {
+                        CassError(CassErrorKind::Error("Failed to downcast to Int8".to_string()))
+                    })?;
+                    Ok(CqlValue::TinyInt(int8.0))
+                } else if h == Int16::type_hash() {
+                    let int16: &Int16 = obj.downcast_borrow_ref().ok_or_else(|| {
+                        CassError(CassErrorKind::Error("Failed to downcast to Int16".to_string()))
+                    })?;
+                    Ok(CqlValue::SmallInt(int16.0))
+                } else if h == Int32::type_hash() {
+                    let int32: &Int32 = obj.downcast_borrow_ref().ok_or_else(|| {
+                        CassError(CassErrorKind::Error("Failed to downcast to Int32".to_string()))
+                    })?;
+                    Ok(CqlValue::Int(int32.0))
+                } else if h == Float32::type_hash() {
+                    let float32: &Float32 = obj.downcast_borrow_ref().ok_or_else(|| {
+                        CassError(CassErrorKind::Error("Failed to downcast to Float32".to_string()))
+                    })?;
+                    Ok(CqlValue::Float(float32.0))
+                } else {
+                    Err(CassError(CassErrorKind::Error(format!(
+                        "Unsupported Any type for IPC: {:?}",
+                        obj.type_info()
+                    ))))
+                }
+            }
+            Value::Object(shared_obj) => {
+                // Object represents a UDT (User Defined Type)
+                let obj = shared_obj.borrow_ref().map_err(|_| {
+                    CassError(CassErrorKind::Error("Failed to borrow object".to_string()))
+                })?;
+                let mut fields = Vec::with_capacity(obj.len());
+                for (key, value) in obj.iter() {
+                    let field_name = key.as_str().to_string();
+                    let field_value = self.rune_value_to_cql_value(value)?;
+                    fields.push((field_name, Some(field_value)));
+                }
+                // Sort fields by name for consistent ordering
+                fields.sort_by(|a, b| a.0.cmp(&b.0));
+                Ok(CqlValue::UserDefinedType {
+                    name: "udt".to_string(), // placeholder - actual type determined by prepared statement
+                    keyspace: "".to_string(),
+                    fields,
+                })
+            }
+            other => Err(CassError(CassErrorKind::Error(format!(
+                "Unsupported Rune value type for IPC: {:?}",
+                other
+            )))),
+        }
+    }
+
     pub async fn batch_prepared(
         &self,
         keys: Vec<&str>,
@@ -1165,6 +1693,61 @@ impl Context {
         } else if keys_len == 0 {
             return Err(CassError(CassErrorKind::Error("Empty batch".to_string())));
         }
+
+        // IPC mode: delegate to the driver counterpart
+        if let Some(ref mgr) = self.ipc_session_manager {
+            // Check all statements are prepared
+            for key in &keys {
+                if !self.ipc_prepared_keys.contains(*key) {
+                    return Err(CassError(CassErrorKind::PreparedStatementNotFound(
+                        key.to_string(),
+                    )));
+                }
+            }
+
+            // Convert params to CqlValue lists
+            let mut statements: Vec<(&str, Vec<CqlValue>)> = Vec::with_capacity(keys.len());
+            for (i, key) in keys.iter().enumerate() {
+                let param = params.get(i).expect("params length verified");
+                let cql_values = self.rune_value_to_cql_values(param)?;
+                statements.push((key, cql_values));
+            }
+
+            // Build the slice of tuples for the IPC call
+            let stmt_refs: Vec<(&str, &[CqlValue])> =
+                statements.iter().map(|(k, v)| (*k, v.as_slice())).collect();
+
+            let start_time = self.stats.try_lock().unwrap().start_request();
+
+            let result = mgr
+                .batch(self.ipc_session_id, &stmt_refs, self.ipc_consistency)
+                .await;
+
+            let duration = Instant::now() - start_time;
+
+            match result {
+                Ok(driver_latency) => {
+                    self.stats.try_lock().unwrap().complete_request_simple(
+                        duration,
+                        driver_latency,
+                        Some(keys.len() as u64),
+                    );
+                    return Ok(());
+                }
+                Err(e) => {
+                    self.stats
+                        .try_lock()
+                        .unwrap()
+                        .record_ipc_error(&e.to_string());
+                    return Err(CassError(CassErrorKind::Error(format!(
+                        "IPC batch failed: {}",
+                        e
+                    ))));
+                }
+            }
+        }
+
+        // Direct mode: use the scylla session
         let mut batch: Batch = Batch::new(BatchType::Logged);
         let mut batch_values: Vec<Vec<Option<CqlValue>>> = vec![];
         for (i, key) in enumerate(keys) {

@@ -1,0 +1,9 @@
+# Benchmark artifacts
+benchmark-reports/
+profiles/
+
+*.png
+
+# Python cache
+__pycache__/
+*.pyc

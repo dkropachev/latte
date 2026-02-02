@@ -4,3 +4,24 @@
 
 # Linux swap files range from .saa to .swp (used by vim and some other apps)
 *.s[a-w][a-p]
+driver-adapters/*/target/
+
+**/TODO.md
+**/PLAN.md
+
+# Codex
+.codex/
+.codex-cache/
+.codex-config.json
+.codex-settings.json
+codex.log
+AGENTS.md
+
+# Claude / AI assistant metadata
+.anthropic/
+.claude/
+claude.log
+claude_history.json
+claude_config.json
+CLAUDE.md
+

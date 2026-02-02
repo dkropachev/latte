@@ -18,6 +18,8 @@ pub struct SessionStats {
     pub queue_length: u64,
     pub mean_queue_length: f32,
     pub resp_times_ns: LatencyDistributionRecorder,
+    /// Driver-side latency (only populated in IPC/driver mode).
+    pub driver_resp_times_ns: LatencyDistributionRecorder,
 }
 
 impl SessionStats {
@@ -88,6 +90,31 @@ impl SessionStats {
         }
     }
 
+    /// Simple completion for IPC mode where we don't have a scylla Result type.
+    /// Optionally records driver-side latency if provided.
+    pub fn complete_request_simple(
+        &mut self,
+        duration: Duration,
+        driver_latency: Option<Duration>,
+        total_rows: Option<u64>,
+    ) {
+        self.queue_length -= 1;
+        self.resp_times_ns.record(duration);
+        if let Some(dl) = driver_latency {
+            self.driver_resp_times_ns.record(dl);
+        }
+        self.req_count += 1;
+        if let Some(n) = total_rows {
+            self.row_count += n;
+        }
+    }
+
+    /// Record an IPC error.
+    pub fn record_ipc_error(&mut self, error: &str) {
+        self.req_error_count += 1;
+        self.req_errors.insert(error.to_string());
+    }
+
     pub fn store_retry_error(&mut self, error_str: String) {
         self.req_retry_count += 1;
         if self.req_retry_count <= PRINT_RETRY_ERROR_LIMIT {
@@ -105,6 +132,7 @@ impl SessionStats {
         self.req_errors.clear();
         self.req_retry_errors.clear();
         self.resp_times_ns.clear();
+        self.driver_resp_times_ns.clear();
 
         // note that current queue_length is *not* reset to zero because there
         // might be pending requests and if we set it to zero, that would underflow
@@ -123,6 +151,7 @@ impl Default for SessionStats {
             queue_length: 0,
             mean_queue_length: 0.0,
             resp_times_ns: LatencyDistributionRecorder::default(),
+            driver_resp_times_ns: LatencyDistributionRecorder::default(),
         }
     }
 }

@@ -20,6 +20,7 @@ rmp = "0.8"
 rmp-serde = "1"
 chrono = { version = "0.4", features = ["serde"] }
 clap = { version = "4", features = ["derive", "cargo", "env"] }
+dashmap = "6"
 console = "0.15.0"
 cpu-time = "1.0.0"
 futures = "0.3"
@@ -53,7 +54,7 @@ time = "0.3"
 thiserror = "2.0.0"
 # NOTE: pin the tokio version to be 1.44.2 to avoid newer versions with performance regression
 #       See: https://github.com/tokio-rs/tokio/issues/7744
-tokio = { version = "=1.44.2", features = ["rt", "rt-multi-thread", "time", "parking_lot", "signal"] }
+tokio = { version = "=1.44.2", features = ["rt", "rt-multi-thread", "time", "parking_lot", "signal", "net", "process", "fs"] }
 tokio-stream = "0.1"
 tracing = "0.1"
 tracing-appender = "0.2"

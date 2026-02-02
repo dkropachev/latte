@@ -1,0 +1,32 @@
+[
+{
+  "directory": "/extra/scylladb/latte/driver-adapters/cpp-driver/build",
+  "command": "/usr/bin/c++ -DIPC_PROTOCOL_VERSION=1 -I/extra/scylladb/latte/driver-adapters/cpp-driver/src -I/usr/local/include/cassandra -O3 -DNDEBUG -std=c++17 -Wall -Wextra -Wpedantic -Werror -Wno-unused-parameter -o CMakeFiles/latte-cpp-driver.dir/src/main.cpp.o -c /extra/scylladb/latte/driver-adapters/cpp-driver/src/main.cpp",
+  "file": "/extra/scylladb/latte/driver-adapters/cpp-driver/src/main.cpp",
+  "output": "CMakeFiles/latte-cpp-driver.dir/src/main.cpp.o"
+},
+{
+  "directory": "/extra/scylladb/latte/driver-adapters/cpp-driver/build",
+  "command": "/usr/bin/c++ -DIPC_PROTOCOL_VERSION=1 -I/extra/scylladb/latte/driver-adapters/cpp-driver/src -I/usr/local/include/cassandra -O3 -DNDEBUG -std=c++17 -Wall -Wextra -Wpedantic -Werror -Wno-unused-parameter -o CMakeFiles/latte-cpp-driver.dir/src/server.cpp.o -c /extra/scylladb/latte/driver-adapters/cpp-driver/src/server.cpp",
+  "file": "/extra/scylladb/latte/driver-adapters/cpp-driver/src/server.cpp",
+  "output": "CMakeFiles/latte-cpp-driver.dir/src/server.cpp.o"
+},
+{
+  "directory": "/extra/scylladb/latte/driver-adapters/cpp-driver/build",
+  "command": "/usr/bin/c++ -DIPC_PROTOCOL_VERSION=1 -I/extra/scylladb/latte/driver-adapters/cpp-driver/src -I/usr/local/include/cassandra -O3 -DNDEBUG -std=c++17 -Wall -Wextra -Wpedantic -Werror -Wno-unused-parameter -o CMakeFiles/latte-cpp-driver.dir/src/protocol.cpp.o -c /extra/scylladb/latte/driver-adapters/cpp-driver/src/protocol.cpp",
+  "file": "/extra/scylladb/latte/driver-adapters/cpp-driver/src/protocol.cpp",
+  "output": "CMakeFiles/latte-cpp-driver.dir/src/protocol.cpp.o"
+},
+{
+  "directory": "/extra/scylladb/latte/driver-adapters/cpp-driver/build",
+  "command": "/usr/bin/c++ -DIPC_PROTOCOL_VERSION=1 -I/extra/scylladb/latte/driver-adapters/cpp-driver/src -I/usr/local/include/cassandra -O3 -DNDEBUG -std=c++17 -Wall -Wextra -Wpedantic -Werror -Wno-unused-parameter -o CMakeFiles/latte-cpp-driver.dir/src/session.cpp.o -c /extra/scylladb/latte/driver-adapters/cpp-driver/src/session.cpp",
+  "file": "/extra/scylladb/latte/driver-adapters/cpp-driver/src/session.cpp",
+  "output": "CMakeFiles/latte-cpp-driver.dir/src/session.cpp.o"
+},
+{
+  "directory": "/extra/scylladb/latte/driver-adapters/cpp-driver/build",
+  "command": "/usr/bin/c++ -DIPC_PROTOCOL_VERSION=1 -I/extra/scylladb/latte/driver-adapters/cpp-driver/src -I/usr/local/include/cassandra -O3 -DNDEBUG -std=c++17 -Wall -Wextra -Wpedantic -Werror -Wno-unused-parameter -o CMakeFiles/latte-cpp-driver.dir/src/types.cpp.o -c /extra/scylladb/latte/driver-adapters/cpp-driver/src/types.cpp",
+  "file": "/extra/scylladb/latte/driver-adapters/cpp-driver/src/types.cpp",
+  "output": "CMakeFiles/latte-cpp-driver.dir/src/types.cpp.o"
+}
+]

@@ -1,0 +1,35 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environment
+.venv/
+venv/
+ENV/
+
+# Test files
+tests/
+test_*.py
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Documentation
+README.md
+TODO.md
+*.md
+
+# Build files
+Makefile
+
+# IDE/tools
+.idea/
+.vscode/
+.ruff_cache/
+
+# Git
+.git
+.gitignore

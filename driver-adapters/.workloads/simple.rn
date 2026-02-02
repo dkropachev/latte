@@ -1,0 +1,181 @@
+//! Simple CQL integration test workload.
+//!
+//! A minimal workload that tests basic insert/select operations
+//! without using timestamp types that may have driver-specific limitations.
+//!
+//! USAGE:
+//!   latte schema --driver-socket /tmp/driver.sock driver-adapters/workloads/simple.rn
+//!   latte load --driver-socket /tmp/driver.sock -P row_count=100 driver-adapters/workloads/simple.rn
+//!   latte run --driver-socket /tmp/driver.sock -d 10s -P row_count=100 driver-adapters/workloads/simple.rn
+
+use latte::*;
+
+// ============================================================================
+// Configuration
+// ============================================================================
+
+const KEYSPACE = latte::param!("keyspace", "latte_simple");
+const TABLE = latte::param!("table", "simple");
+const ROW_COUNT = latte::param!("row_count", 10000);
+const REPLICATION_FACTOR = latte::param!("replication_factor", 1);
+
+const INSERT = "insert";
+const SELECT_BY_PK = "select_by_pk";
+
+// ============================================================================
+// Schema
+// ============================================================================
+
+pub async fn schema(ctx) {
+    ctx.execute(`
+        CREATE KEYSPACE IF NOT EXISTS ${KEYSPACE}
+        WITH replication = {
+            'class': 'SimpleStrategy',
+            'replication_factor': ${REPLICATION_FACTOR}
+        }
+    `).await?;
+
+    ctx.execute(`DROP TABLE IF EXISTS ${KEYSPACE}.${TABLE}`).await?;
+
+    ctx.execute(`
+        CREATE TABLE ${KEYSPACE}.${TABLE} (
+            pk bigint PRIMARY KEY,
+            col_int int,
+            col_bigint bigint,
+            col_float float,
+            col_double double,
+            col_boolean boolean,
+            col_text text,
+            col_blob blob
+        )
+    `).await?;
+
+    Ok(())
+}
+
+// ============================================================================
+// Prepare
+// ============================================================================
+
+pub async fn prepare(ctx) {
+    ctx.load_cycle_count = ROW_COUNT;
+
+    ctx.prepare(INSERT, `
+        INSERT INTO ${KEYSPACE}.${TABLE} (
+            pk,
+            col_int, col_bigint, col_float, col_double,
+            col_boolean,
+            col_text, col_blob
+        ) VALUES (
+            :pk,
+            :col_int, :col_bigint, :col_float, :col_double,
+            :col_boolean,
+            :col_text, :col_blob
+        )
+    `).await?;
+
+    ctx.prepare(SELECT_BY_PK, `
+        SELECT * FROM ${KEYSPACE}.${TABLE}
+        WHERE pk = :pk
+    `).await?;
+
+    Ok(())
+}
+
+// ============================================================================
+// Load Data
+// ============================================================================
+
+pub async fn erase(ctx) {
+    ctx.execute(`TRUNCATE ${KEYSPACE}.${TABLE}`).await?;
+    Ok(())
+}
+
+fn generate_row_data(idx) {
+    // Use idx directly as pk so validate can look up rows correctly
+    // During run/validate, idx may be random, so we map it to valid row range
+    let pk = idx;
+    let col_int = latte::hash_range(idx + 1, 2147483647);
+    let col_bigint = latte::hash(idx + 2);
+    let col_float = latte::normal_f32(idx + 3, 0.0, 1000.0);
+    let col_double = latte::normal(idx + 4, 0.0, 1000000.0);
+    let col_boolean = latte::hash(idx + 5) % 2 == 0;
+    let col_text = latte::text(idx + 6, latte::hash_range(idx, 64) + 20);
+    let col_blob = latte::blob(idx + 7, latte::hash_range(idx, 50) + 10);
+
+    #{
+        "pk": pk,
+        "col_int": col_int,
+        "col_bigint": col_bigint,
+        "col_float": col_float,
+        "col_double": col_double,
+        "col_boolean": col_boolean,
+        "col_text": col_text,
+        "col_blob": col_blob,
+    }
+}
+
+pub async fn load(ctx, i) {
+    let d = generate_row_data(i);
+    ctx.execute_prepared(INSERT, [
+        d.pk,
+        d.col_int, d.col_bigint, d.col_float, d.col_double,
+        d.col_boolean,
+        d.col_text, d.col_blob,
+    ]).await?;
+    Ok(())
+}
+
+// ============================================================================
+// Run Benchmark
+// ============================================================================
+
+pub async fn run(ctx, i) {
+    // Map random cycle to valid row index
+    let row_idx = latte::hash(i) % ROW_COUNT;
+    ctx.execute_prepared(SELECT_BY_PK, [row_idx]).await?;
+    Ok(())
+}
+
+// ============================================================================
+// Validate Results
+// ============================================================================
+
+pub async fn validate(ctx, i) {
+    // Map random cycle to valid row index for consistent lookup
+    let row_idx = latte::hash(i) % ROW_COUNT;
+    let d = generate_row_data(row_idx);
+    let rows = ctx.execute_prepared_with_result(SELECT_BY_PK, [d.pk]).await?;
+
+    if rows.len() != 1 {
+        ctx.signal_failure(`Expected 1 row for pk=${d.pk}, got ${rows.len()}`).await?;
+        return Ok(());
+    }
+
+    let row = rows.0;
+
+    // Validate primary key
+    if row.get("pk")? != d.pk {
+        ctx.signal_failure(`pk mismatch: expected ${d.pk}, got ${row.get("pk")?}`).await?;
+    }
+
+    // Validate numeric types
+    if row.get("col_int")? != d.col_int {
+        ctx.signal_failure(`col_int mismatch`).await?;
+    }
+    if row.get("col_bigint")? != d.col_bigint {
+        ctx.signal_failure(`col_bigint mismatch`).await?;
+    }
+
+    // Validate boolean
+    if row.get("col_boolean")? != d.col_boolean {
+        ctx.signal_failure(`col_boolean mismatch`).await?;
+    }
+
+    // Validate text
+    if row.get("col_text")? != d.col_text {
+        ctx.signal_failure(`col_text mismatch`).await?;
+    }
+
+    Ok(())
+}

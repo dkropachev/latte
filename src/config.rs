@@ -258,6 +258,40 @@ pub enum ValidationStrategy {
     Ignore, // Ignore validation errors - face, print, go on.
 }
 
+/// Configuration for the external driver mode (universal loader).
+#[derive(Parser, Debug, Clone, Serialize, Deserialize, Default)]
+pub struct DriverConf {
+    /// Docker image for the driver adapter.
+    ///
+    /// When specified, Latte starts a Docker container with this image and
+    /// delegates query execution to it via Unix domain socket.
+    #[clap(long("driver-image"), value_name = "IMAGE")]
+    pub driver_image: Option<String>,
+
+    /// Path to the Unix domain socket for driver communication.
+    ///
+    /// Without --driver-image: connects to an existing driver at this socket.
+    /// With --driver-image: specifies where the driver should create its socket.
+    #[clap(long("driver-socket"), value_name = "PATH")]
+    pub driver_socket: Option<PathBuf>,
+}
+
+const DEFAULT_SOCKET_PATH: &str = "/tmp/latte-driver.sock";
+
+impl DriverConf {
+    /// Returns true if external driver mode should be used.
+    pub fn is_external(&self) -> bool {
+        self.driver_image.is_some() || self.driver_socket.is_some()
+    }
+
+    /// Returns the socket path to use for IPC.
+    pub fn socket_path(&self) -> PathBuf {
+        self.driver_socket
+            .clone()
+            .unwrap_or_else(|| PathBuf::from(DEFAULT_SOCKET_PATH))
+    }
+}
+
 #[derive(Clone, Copy, Default, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum Consistency {
     Any,
@@ -471,6 +505,10 @@ pub struct SchemaCommand {
     // Cassandra connection settings.
     #[clap(flatten)]
     pub connection: ConnectionConf,
+
+    // External driver settings for universal loader.
+    #[clap(flatten)]
+    pub driver: DriverConf,
 }
 
 #[derive(Parser, Debug, Serialize, Deserialize)]
@@ -502,6 +540,10 @@ pub struct LoadCommand {
     // Cassandra connection settings.
     #[clap(flatten)]
     pub connection: ConnectionConf,
+
+    // External driver settings for universal loader.
+    #[clap(flatten)]
+    pub driver: DriverConf,
 }
 
 #[derive(Parser, Debug, Serialize, Deserialize)]
@@ -624,6 +666,10 @@ pub struct RunCommand {
     // Cassandra connection settings.
     #[clap(flatten)]
     pub connection: ConnectionConf,
+
+    // External driver settings for universal loader.
+    #[clap(flatten)]
+    pub driver: DriverConf,
 
     /// Seconds since 1970-01-01T00:00:00Z
     #[clap(hide = true, long)]

@@ -1,0 +1,454 @@
+//! Collection and complex CQL data types integration test workload.
+//!
+//! Tests: list, set, map (frozen and non-frozen), nested collections, UDT, and tuple types.
+//!
+//! USAGE:
+//!   latte schema --driver /tmp/driver.sock driver-adapters/workloads/collections.rn
+//!   latte load --driver /tmp/driver.sock -P row_count=1000 driver-adapters/workloads/collections.rn
+//!   latte run --driver /tmp/driver.sock -d 10s -r 100 -P row_count=1000 -f validate driver-adapters/workloads/collections.rn
+
+use latte::*;
+
+// ============================================================================
+// Configuration
+// ============================================================================
+
+const KEYSPACE = latte::param!("keyspace", "latte_collections");
+const TABLE = latte::param!("table", "collections");
+const ROW_COUNT = latte::param!("row_count", 10000);
+const REPLICATION_FACTOR = latte::param!("replication_factor", 1);
+
+const INSERT = "insert";
+const SELECT_BY_PK_CK = "select_by_pk_ck";
+
+// ============================================================================
+// Schema
+// ============================================================================
+
+pub async fn schema(ctx) {
+    ctx.execute(`
+        CREATE KEYSPACE IF NOT EXISTS ${KEYSPACE}
+        WITH replication = {
+            'class': 'SimpleStrategy',
+            'replication_factor': ${REPLICATION_FACTOR}
+        }
+    `).await?;
+
+    // Create UDTs for nested type testing
+    ctx.execute(`CREATE TYPE IF NOT EXISTS ${KEYSPACE}.address (
+        street text,
+        city text,
+        zip int
+    )`).await?;
+
+    ctx.execute(`CREATE TYPE IF NOT EXISTS ${KEYSPACE}.person (
+        name text,
+        age int,
+        address frozen<address>
+    )`).await?;
+
+    ctx.execute(`DROP TABLE IF EXISTS ${KEYSPACE}.${TABLE}`).await?;
+
+    ctx.execute(`
+        CREATE TABLE ${KEYSPACE}.${TABLE} (
+            pk bigint,
+            ck bigint,
+
+            -- Non-frozen collections (mutable)
+            col_list_text list<text>,
+            col_list_int list<int>,
+            col_list_bigint list<bigint>,
+            col_set_int set<int>,
+            col_set_text set<text>,
+            col_set_bigint set<bigint>,
+            col_map_text_int map<text, int>,
+            col_map_int_text map<int, text>,
+            col_map_text_bigint map<text, bigint>,
+
+            -- Frozen collections (immutable)
+            col_frozen_list_int frozen<list<int>>,
+            col_frozen_list_text frozen<list<text>>,
+            col_frozen_set_int frozen<set<int>>,
+            col_frozen_set_text frozen<set<text>>,
+            col_frozen_map_int_text frozen<map<int, text>>,
+            col_frozen_map_text_int frozen<map<text, int>>,
+
+            -- Nested collections (frozen required)
+            col_list_of_lists frozen<list<frozen<list<int>>>>,
+            col_list_of_sets frozen<list<frozen<set<int>>>>,
+            col_list_of_maps frozen<list<frozen<map<text, int>>>>,
+            col_set_of_lists frozen<set<frozen<list<int>>>>,
+            col_map_of_lists frozen<map<text, frozen<list<int>>>>,
+            col_map_of_sets frozen<map<text, frozen<set<int>>>>,
+            col_map_of_maps frozen<map<text, frozen<map<text, int>>>>,
+
+            -- UDT types
+            col_udt_address frozen<address>,
+            col_udt_person frozen<person>,
+            col_list_udt frozen<list<frozen<address>>>,
+            col_set_udt frozen<set<frozen<address>>>,
+            col_map_udt map<text, frozen<person>>,
+
+            -- Tuple types
+            col_tuple_simple tuple<int, text, boolean>,
+            col_tuple_with_list tuple<bigint, frozen<list<text>>>,
+            col_tuple_with_map tuple<text, frozen<map<text, int>>>,
+            col_tuple_nested tuple<int, frozen<list<int>>, frozen<map<text, int>>>,
+
+            PRIMARY KEY (pk, ck)
+        )
+    `).await?;
+}
+
+pub async fn erase(ctx) {
+    ctx.execute(`TRUNCATE TABLE ${KEYSPACE}.${TABLE}`).await?
+}
+
+// ============================================================================
+// Prepare
+// ============================================================================
+
+pub async fn prepare(ctx) {
+    ctx.load_cycle_count = ROW_COUNT;
+
+    ctx.prepare(INSERT, `
+        INSERT INTO ${KEYSPACE}.${TABLE} (
+            pk, ck,
+            col_list_text, col_list_int, col_list_bigint,
+            col_set_int, col_set_text, col_set_bigint,
+            col_map_text_int, col_map_int_text, col_map_text_bigint,
+            col_frozen_list_int, col_frozen_list_text,
+            col_frozen_set_int, col_frozen_set_text,
+            col_frozen_map_int_text, col_frozen_map_text_int,
+            col_list_of_lists, col_list_of_sets, col_list_of_maps,
+            col_set_of_lists,
+            col_map_of_lists, col_map_of_sets, col_map_of_maps,
+            col_udt_address, col_udt_person, col_list_udt, col_set_udt, col_map_udt,
+            col_tuple_simple, col_tuple_with_list, col_tuple_with_map, col_tuple_nested
+        ) VALUES (
+            :pk, :ck,
+            :col_list_text, :col_list_int, :col_list_bigint,
+            :col_set_int, :col_set_text, :col_set_bigint,
+            :col_map_text_int, :col_map_int_text, :col_map_text_bigint,
+            :col_frozen_list_int, :col_frozen_list_text,
+            :col_frozen_set_int, :col_frozen_set_text,
+            :col_frozen_map_int_text, :col_frozen_map_text_int,
+            :col_list_of_lists, :col_list_of_sets, :col_list_of_maps,
+            :col_set_of_lists,
+            :col_map_of_lists, :col_map_of_sets, :col_map_of_maps,
+            :col_udt_address, :col_udt_person, :col_list_udt, :col_set_udt, :col_map_udt,
+            :col_tuple_simple, :col_tuple_with_list, :col_tuple_with_map, :col_tuple_nested
+        )
+    `).await?;
+
+    ctx.prepare(SELECT_BY_PK_CK, `
+        SELECT * FROM ${KEYSPACE}.${TABLE} WHERE pk = :pk AND ck = :ck
+    `).await?;
+}
+
+// ============================================================================
+// Data Generation
+// ============================================================================
+
+fn generate_row_data(i) {
+    let idx = i % ROW_COUNT;
+    let pk = latte::hash(idx / 10);
+    let ck = latte::hash(idx);
+
+    // Non-frozen lists
+    let col_list_text = if idx % 20 == 0 { None } else {
+        [latte::text(idx, 10), latte::text(idx + 1, 10), latte::text(idx + 2, 10)]
+    };
+    let col_list_int = if idx % 21 == 0 { None } else {
+        [latte::hash_range(idx, 1000), latte::hash_range(idx + 1, 1000), latte::hash_range(idx + 2, 1000)]
+    };
+    let col_list_bigint = if idx % 22 == 0 { None } else {
+        [latte::hash(idx), latte::hash(idx + 1), latte::hash(idx + 2)]
+    };
+
+    // Non-frozen sets (must be sorted)
+    let col_set_int = if idx % 23 == 0 { None } else {
+        let s = [latte::hash_range(idx, 1000), latte::hash_range(idx + 10, 1000), latte::hash_range(idx + 20, 1000)];
+        s.sort();
+        s
+    };
+    let col_set_text = if idx % 24 == 0 { None } else {
+        let s = [latte::text(idx + 30, 8), latte::text(idx + 31, 8), latte::text(idx + 32, 8)];
+        s.sort();
+        s
+    };
+    let col_set_bigint = if idx % 25 == 0 { None } else {
+        let s = [latte::hash(idx + 40), latte::hash(idx + 41), latte::hash(idx + 42)];
+        s.sort();
+        s
+    };
+
+    // Non-frozen maps (must be sorted by key)
+    let col_map_text_int = if idx % 26 == 0 { None } else {
+        let m = [
+            (latte::text(idx + 50, 6), latte::hash_range(idx, 1000)),
+            (latte::text(idx + 51, 6), latte::hash_range(idx + 1, 1000)),
+        ];
+        m.sort();
+        m
+    };
+    let col_map_int_text = if idx % 27 == 0 { None } else {
+        let m = [
+            (latte::hash_range(idx + 60, 100), latte::text(idx, 10)),
+            (latte::hash_range(idx + 61, 100), latte::text(idx + 1, 10)),
+        ];
+        m.sort();
+        m
+    };
+    let col_map_text_bigint = if idx % 28 == 0 { None } else {
+        let m = [
+            (latte::text(idx + 70, 6), latte::hash(idx)),
+            (latte::text(idx + 71, 6), latte::hash(idx + 1)),
+        ];
+        m.sort();
+        m
+    };
+
+    // Frozen lists
+    let col_frozen_list_int = if idx % 29 == 0 { None } else {
+        [1, 2, 3, 4, 5]
+    };
+    let col_frozen_list_text = if idx % 30 == 0 { None } else {
+        ["alpha", "beta", "gamma"]
+    };
+
+    // Frozen sets
+    let col_frozen_set_int = if idx % 31 == 0 { None } else {
+        [10, 20, 30]
+    };
+    let col_frozen_set_text = if idx % 32 == 0 { None } else {
+        ["a", "b", "c"]
+    };
+
+    // Frozen maps
+    let col_frozen_map_int_text = if idx % 33 == 0 { None } else {
+        [(1, "one"), (2, "two"), (3, "three")]
+    };
+    let col_frozen_map_text_int = if idx % 34 == 0 { None } else {
+        let m = [("x", 10), ("y", 20), ("z", 30)];
+        m.sort();
+        m
+    };
+
+    // Nested collections
+    let col_list_of_lists = if idx % 35 == 0 { None } else {
+        [[1, 2], [3, 4], [5, 6]]
+    };
+    let col_list_of_sets = if idx % 36 == 0 { None } else {
+        [[1, 2, 3], [4, 5, 6]]
+    };
+    let col_list_of_maps = if idx % 37 == 0 { None } else {
+        [[("a", 1), ("b", 2)], [("c", 3), ("d", 4)]]
+    };
+    let col_set_of_lists = if idx % 38 == 0 { None } else {
+        let s = [[1, 2], [3, 4]];
+        s.sort();
+        s
+    };
+    let col_map_of_lists = if idx % 39 == 0 { None } else {
+        let m = [("first", [1, 2, 3]), ("second", [4, 5, 6])];
+        m.sort();
+        m
+    };
+    let col_map_of_sets = if idx % 40 == 0 { None } else {
+        let m = [("odds", [1, 3, 5]), ("evens", [2, 4, 6])];
+        m.sort();
+        m
+    };
+    let col_map_of_maps = if idx % 41 == 0 { None } else {
+        let m = [
+            ("outer1", [("inner1", 1), ("inner2", 2)]),
+            ("outer2", [("inner3", 3), ("inner4", 4)]),
+        ];
+        m.sort();
+        m
+    };
+
+    // UDT types
+    let col_udt_address = if idx % 42 == 0 { None } else {
+        #{"street": latte::text(idx + 80, 20), "city": latte::text(idx + 81, 10), "zip": latte::hash_range(idx, 99999)}
+    };
+    let col_udt_person = if idx % 43 == 0 { None } else {
+        #{
+            "name": latte::text(idx + 90, 15),
+            "age": latte::hash_range(idx, 100),
+            "address": #{"street": "123 Main St", "city": "Boston", "zip": 12345}
+        }
+    };
+    let col_list_udt = if idx % 44 == 0 { None } else {
+        [
+            #{"street": "First St", "city": "CityA", "zip": 11111},
+            #{"street": "Second St", "city": "CityB", "zip": 22222},
+        ]
+    };
+    let col_set_udt = if idx % 45 == 0 { None } else {
+        let s = [
+            #{"street": "Alpha Rd", "city": "TownX", "zip": 33333},
+            #{"street": "Beta Rd", "city": "TownY", "zip": 44444},
+        ];
+        s.sort();
+        s
+    };
+    let col_map_udt = if idx % 46 == 0 { None } else {
+        let m = [
+            ("alice", #{"name": "Alice", "age": 30, "address": #{"street": "A St", "city": "A City", "zip": 10000}}),
+            ("bob", #{"name": "Bob", "age": 25, "address": #{"street": "B St", "city": "B City", "zip": 20000}}),
+        ];
+        m.sort();
+        m
+    };
+
+    // Tuple types
+    let col_tuple_simple = if idx % 47 == 0 { None } else {
+        (latte::hash_range(idx, 1000), latte::text(idx + 100, 10), idx % 2 == 0)
+    };
+    let col_tuple_with_list = if idx % 48 == 0 { None } else {
+        (latte::hash(idx + 110), ["item1", "item2", "item3"])
+    };
+    let col_tuple_with_map = if idx % 49 == 0 { None } else {
+        let m = [("k1", 1), ("k2", 2)];
+        m.sort();
+        (latte::text(idx + 120, 8), m)
+    };
+    let col_tuple_nested = if idx % 50 == 0 { None } else {
+        let m = [("a", 1), ("b", 2)];
+        m.sort();
+        (latte::hash_range(idx, 100), [10, 20, 30], m)
+    };
+
+    #{
+        "pk": pk,
+        "ck": ck,
+        "col_list_text": col_list_text,
+        "col_list_int": col_list_int,
+        "col_list_bigint": col_list_bigint,
+        "col_set_int": col_set_int,
+        "col_set_text": col_set_text,
+        "col_set_bigint": col_set_bigint,
+        "col_map_text_int": col_map_text_int,
+        "col_map_int_text": col_map_int_text,
+        "col_map_text_bigint": col_map_text_bigint,
+        "col_frozen_list_int": col_frozen_list_int,
+        "col_frozen_list_text": col_frozen_list_text,
+        "col_frozen_set_int": col_frozen_set_int,
+        "col_frozen_set_text": col_frozen_set_text,
+        "col_frozen_map_int_text": col_frozen_map_int_text,
+        "col_frozen_map_text_int": col_frozen_map_text_int,
+        "col_list_of_lists": col_list_of_lists,
+        "col_list_of_sets": col_list_of_sets,
+        "col_list_of_maps": col_list_of_maps,
+        "col_set_of_lists": col_set_of_lists,
+        "col_map_of_lists": col_map_of_lists,
+        "col_map_of_sets": col_map_of_sets,
+        "col_map_of_maps": col_map_of_maps,
+        "col_udt_address": col_udt_address,
+        "col_udt_person": col_udt_person,
+        "col_list_udt": col_list_udt,
+        "col_set_udt": col_set_udt,
+        "col_map_udt": col_map_udt,
+        "col_tuple_simple": col_tuple_simple,
+        "col_tuple_with_list": col_tuple_with_list,
+        "col_tuple_with_map": col_tuple_with_map,
+        "col_tuple_nested": col_tuple_nested,
+    }
+}
+
+// ============================================================================
+// Load
+// ============================================================================
+
+pub async fn load(ctx, i) {
+    let d = generate_row_data(i);
+
+    ctx.execute_prepared(INSERT, [
+        d.pk, d.ck,
+        d.col_list_text, d.col_list_int, d.col_list_bigint,
+        d.col_set_int, d.col_set_text, d.col_set_bigint,
+        d.col_map_text_int, d.col_map_int_text, d.col_map_text_bigint,
+        d.col_frozen_list_int, d.col_frozen_list_text,
+        d.col_frozen_set_int, d.col_frozen_set_text,
+        d.col_frozen_map_int_text, d.col_frozen_map_text_int,
+        d.col_list_of_lists, d.col_list_of_sets, d.col_list_of_maps,
+        d.col_set_of_lists,
+        d.col_map_of_lists, d.col_map_of_sets, d.col_map_of_maps,
+        d.col_udt_address, d.col_udt_person, d.col_list_udt, d.col_set_udt, d.col_map_udt,
+        d.col_tuple_simple, d.col_tuple_with_list, d.col_tuple_with_map, d.col_tuple_nested,
+    ]).await?
+}
+
+// ============================================================================
+// Run
+// ============================================================================
+
+pub async fn run(ctx, i) {
+    let d = generate_row_data(i);
+    ctx.execute_prepared(SELECT_BY_PK_CK, [d.pk, d.ck]).await?
+}
+
+pub async fn validate(ctx, i) {
+    let d = generate_row_data(i);
+    let rows = ctx.execute_prepared_with_result(SELECT_BY_PK_CK, [d.pk, d.ck]).await?;
+
+    if rows.len() != 1 {
+        ctx.signal_failure(`Expected 1 row for pk=${d.pk}, ck=${d.ck}, got ${rows.len()}`).await?;
+        return Ok(());
+    }
+
+    let row = rows.0;
+
+    // Validate keys
+    if row.get("pk")? != d.pk {
+        ctx.signal_failure(`pk mismatch`).await?;
+    }
+    if row.get("ck")? != d.ck {
+        ctx.signal_failure(`ck mismatch`).await?;
+    }
+
+    // Validate non-frozen collections
+    validate_column(ctx, row, d, "col_list_text").await?;
+    validate_column(ctx, row, d, "col_list_int").await?;
+    validate_column(ctx, row, d, "col_set_int").await?;
+    validate_column(ctx, row, d, "col_map_text_int").await?;
+
+    // Validate frozen collections
+    validate_column(ctx, row, d, "col_frozen_list_int").await?;
+    validate_column(ctx, row, d, "col_frozen_set_int").await?;
+    validate_column(ctx, row, d, "col_frozen_map_int_text").await?;
+
+    // Validate nested collections
+    validate_column(ctx, row, d, "col_list_of_lists").await?;
+    validate_column(ctx, row, d, "col_map_of_lists").await?;
+
+    // Validate UDTs
+    validate_column(ctx, row, d, "col_udt_address").await?;
+    validate_column(ctx, row, d, "col_list_udt").await?;
+
+    // Validate tuples
+    validate_column(ctx, row, d, "col_tuple_simple").await?;
+    validate_column(ctx, row, d, "col_tuple_nested").await?;
+
+    Ok(())
+}
+
+async fn validate_column(ctx, row, expected, col_name) {
+    let actual = row.get(col_name)?;
+    let exp = expected.get(col_name)?;
+
+    if is_none(exp) {
+        if !is_none(actual) {
+            ctx.signal_failure(`${col_name}: expected None, got non-null value`).await?;
+        }
+    } else if is_none(actual) {
+        ctx.signal_failure(`${col_name}: expected non-null value, got None`).await?;
+    }
+    // Note: Deep comparison of complex types (lists, sets, maps, UDTs, tuples) is not
+    // supported in Rune (no == or != operator for these types). We only validate
+    // null/non-null status. Full content validation would require element-by-element
+    // comparison which is type-specific.
+    Ok(())
+}

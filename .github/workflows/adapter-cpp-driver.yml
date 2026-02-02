@@ -1,0 +1,236 @@
+name: Adapter - C++ Driver (Deprecated)
+
+# Note: This adapter does NOT support the 'collections' workload due to
+# limitations in the deprecated cpp-driver's handling of nested collection
+# types (list of lists, UDTs, tuples with embedded collections).
+# The Makefile automatically skips collections tests.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'driver-adapters/cpp-driver/**'
+      - 'driver-adapters/workloads/**'
+      - '.github/workflows/adapter-cpp-driver.yml'
+  pull_request:
+    paths:
+      - 'driver-adapters/cpp-driver/**'
+      - 'driver-adapters/workloads/**'
+      - '.github/workflows/adapter-cpp-driver.yml'
+
+defaults:
+  run:
+    working-directory: driver-adapters/cpp-driver
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install clang-format
+        run: sudo apt-get update && sudo apt-get install -y clang-format
+
+      - name: Check formatting
+        run: find src tests -name '*.cpp' -o -name '*.h' | xargs clang-format --dry-run --Werror
+
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y g++ cmake
+
+      - name: Build and run unit tests
+        run: |
+          mkdir -p build-test
+          echo "Compiling test_protocol..."
+          g++ -std=c++17 -I src -o build-test/test_protocol tests/test_protocol.cpp src/protocol.cpp
+          echo "Running test_protocol..."
+          ./build-test/test_protocol
+          echo ""
+          echo "Compiling test_types..."
+          g++ -std=c++17 -I src -o build-test/test_types tests/test_types.cpp
+          echo "Running test_types..."
+          ./build-test/test_types
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake g++ libuv1-dev libssl-dev
+
+      - name: Install cpp-driver
+        run: |
+          git clone --depth 1 https://github.com/datastax/cpp-driver.git /tmp/cpp-driver
+          cd /tmp/cpp-driver
+          mkdir build && cd build
+          cmake -DCMAKE_BUILD_TYPE=Release ..
+          make -j$(nproc)
+          sudo make install
+          sudo ldconfig
+
+      - name: Build adapter
+        run: |
+          mkdir -p build
+          cd build
+          cmake -DCMAKE_BUILD_TYPE=Release ..
+          make -j$(nproc)
+          mkdir -p ../target/release
+          cp latte-cpp-driver ../target/release/
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: latte-driver-cpp
+          path: driver-adapters/cpp-driver/target/release/latte-cpp-driver
+          retention-days: 1
+
+  integration:
+    name: Integration Tests
+    needs: build
+    runs-on: ubuntu-latest
+    services:
+      scylla:
+        image: scylladb/scylla:latest
+        ports:
+          - 9042:9042
+        options: >-
+          --health-cmd "cqlsh -e 'SELECT now() FROM system.local'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake g++ libuv1-dev libssl-dev
+
+      - name: Install cpp-driver
+        run: |
+          git clone --depth 1 https://github.com/datastax/cpp-driver.git /tmp/cpp-driver
+          cd /tmp/cpp-driver
+          mkdir build && cd build
+          cmake -DCMAKE_BUILD_TYPE=Release ..
+          make -j$(nproc)
+          sudo make install
+          sudo ldconfig
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-action@stable
+
+      - name: Cache cargo (latte)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-latte-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-latte-
+
+      - name: Build latte
+        working-directory: .
+        run: cargo build --release
+
+      - name: Download adapter artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: latte-driver-cpp
+          path: driver-adapters/cpp-driver/target/release/
+
+      - name: Make binaries executable
+        run: |
+          chmod +x target/release/latte
+          chmod +x driver-adapters/cpp-driver/target/release/latte-cpp-driver
+        working-directory: .
+
+      - name: Run integration tests (primitives + vectors only)
+        run: make test-integration
+        env:
+          LATTE_BIN: ${{ github.workspace }}/target/release/latte
+          SCYLLA_CONTACT_POINTS: 127.0.0.1:9042
+
+  benchmark:
+    name: Benchmark Tests
+    needs: build
+    runs-on: ubuntu-latest
+    services:
+      scylla:
+        image: scylladb/scylla:latest
+        ports:
+          - 9042:9042
+        options: >-
+          --health-cmd "cqlsh -e 'SELECT now() FROM system.local'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake g++ libuv1-dev libssl-dev
+
+      - name: Install cpp-driver
+        run: |
+          git clone --depth 1 https://github.com/datastax/cpp-driver.git /tmp/cpp-driver
+          cd /tmp/cpp-driver
+          mkdir build && cd build
+          cmake -DCMAKE_BUILD_TYPE=Release ..
+          make -j$(nproc)
+          sudo make install
+          sudo ldconfig
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-action@stable
+
+      - name: Cache cargo (latte)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-latte-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-latte-
+
+      - name: Build latte
+        working-directory: .
+        run: cargo build --release
+
+      - name: Download adapter artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: latte-driver-cpp
+          path: driver-adapters/cpp-driver/target/release/
+
+      - name: Make binaries executable
+        run: |
+          chmod +x target/release/latte
+          chmod +x driver-adapters/cpp-driver/target/release/latte-cpp-driver
+        working-directory: .
+
+      - name: Run benchmark tests (primitives + vectors only)
+        run: make test-benchmark
+        env:
+          LATTE_BIN: ${{ github.workspace }}/target/release/latte
+          SCYLLA_CONTACT_POINTS: 127.0.0.1:9042
+          BENCHMARK_DURATION: 5s

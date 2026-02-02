@@ -1,0 +1,7 @@
+/extra/scylladb/latte/driver-adapters/cpp-rs-driver/build/CMakeFiles/latte-cpp-rs-driver.dir
+/extra/scylladb/latte/driver-adapters/cpp-rs-driver/build/CMakeFiles/edit_cache.dir
+/extra/scylladb/latte/driver-adapters/cpp-rs-driver/build/CMakeFiles/rebuild_cache.dir
+/extra/scylladb/latte/driver-adapters/cpp-rs-driver/build/CMakeFiles/list_install_components.dir
+/extra/scylladb/latte/driver-adapters/cpp-rs-driver/build/CMakeFiles/install.dir
+/extra/scylladb/latte/driver-adapters/cpp-rs-driver/build/CMakeFiles/install/local.dir
+/extra/scylladb/latte/driver-adapters/cpp-rs-driver/build/CMakeFiles/install/strip.dir

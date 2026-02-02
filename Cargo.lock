@@ -1265,6 +1265,7 @@ dependencies = [
  "clap",
  "console",
  "cpu-time",
+ "dashmap",
  "futures",
  "git2",
  "hdrhistogram",

@@ -1,0 +1,9 @@
+build/
+target/
+.git/
+*.o
+*.a
+*.so
+.test.pid
+.profile.pid
+TODO.md

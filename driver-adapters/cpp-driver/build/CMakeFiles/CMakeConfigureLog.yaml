@@ -1,0 +1,2146 @@
+
+---
+events:
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/CMakeDetermineSystem.cmake:12 (find_program)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_UNAME"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "uname"
+    candidate_directories:
+      - "/home/dmitry.kropachev/.dotnet/"
+      - "/home/dmitry.kropachev/.nvm/versions/node/v20.19.4/bin/"
+      - "/home/dmitry.kropachev/.sdkman/candidates/java/current/bin/"
+      - "/home/dmitry.kropachev/.zshrc.completions/bin/"
+      - "/home/dmitry.kropachev/.local/bin/"
+      - "/home/dmitry.kropachev/bin/"
+      - "/home/dmitry.kropachev/.cargo/bin/"
+      - "/usr/local/sbin/"
+      - "/usr/local/bin/"
+      - "/usr/sbin/"
+      - "/usr/bin/"
+      - "/sbin/"
+      - "/bin/"
+      - "/usr/games/"
+      - "/usr/local/games/"
+      - "/snap/bin/"
+      - "/home/dmitry.kropachev/.dotnet/tools/"
+    searched_directories:
+      - "/home/dmitry.kropachev/.dotnet/uname"
+      - "/home/dmitry.kropachev/.nvm/versions/node/v20.19.4/bin/uname"
+      - "/home/dmitry.kropachev/.sdkman/candidates/java/current/bin/uname"
+      - "/home/dmitry.kropachev/.zshrc.completions/bin/uname"
+      - "/home/dmitry.kropachev/.local/bin/uname"
+      - "/home/dmitry.kropachev/bin/uname"
+      - "/home/dmitry.kropachev/.cargo/bin/uname"
+      - "/usr/local/sbin/uname"
+      - "/usr/local/bin/uname"
+      - "/usr/sbin/uname"
+    found: "/usr/bin/uname"
+    search_context:
+      ENV{PATH}:
+        - "/home/dmitry.kropachev/.dotnet"
+        - "/home/dmitry.kropachev/.nvm/versions/node/v20.19.4/bin"
+        - "/home/dmitry.kropachev/.sdkman/candidates/java/current/bin"
+        - "/home/dmitry.kropachev/.zshrc.completions/bin"
+        - "/home/dmitry.kropachev/.zshrc.completions/bin"
+        - "/home/dmitry.kropachev/.local/bin"
+        - "/home/dmitry.kropachev/bin"
+        - "/home/dmitry.kropachev/.cargo/bin"
+        - "/home/dmitry.kropachev/.local/bin"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/sbin"
+        - "/bin"
+        - "/usr/games"
+        - "/usr/local/games"
+        - "/snap/bin"
+        - "/snap/bin"
+        - "/home/dmitry.kropachev/.dotnet/tools"
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/CMakeDetermineSystem.cmake:212 (message)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      The system is: Linux - 6.8.0-90-generic - x86_64
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/CMakeUnixFindMake.cmake:5 (find_program)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_MAKE_PROGRAM"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "gmake"
+      - "make"
+      - "smake"
+    candidate_directories:
+      - "/home/dmitry.kropachev/.dotnet/"
+      - "/home/dmitry.kropachev/.nvm/versions/node/v20.19.4/bin/"
+      - "/home/dmitry.kropachev/.sdkman/candidates/java/current/bin/"
+      - "/home/dmitry.kropachev/.zshrc.completions/bin/"
+      - "/home/dmitry.kropachev/.local/bin/"
+      - "/home/dmitry.kropachev/bin/"
+      - "/home/dmitry.kropachev/.cargo/bin/"
+      - "/usr/local/sbin/"
+      - "/usr/local/bin/"
+      - "/usr/sbin/"
+      - "/usr/bin/"
+      - "/sbin/"
+      - "/bin/"
+      - "/usr/games/"
+      - "/usr/local/games/"
+      - "/snap/bin/"
+      - "/home/dmitry.kropachev/.dotnet/tools/"
+    searched_directories:
+      - "/home/dmitry.kropachev/.dotnet/gmake"
+      - "/home/dmitry.kropachev/.nvm/versions/node/v20.19.4/bin/gmake"
+      - "/home/dmitry.kropachev/.sdkman/candidates/java/current/bin/gmake"
+      - "/home/dmitry.kropachev/.zshrc.completions/bin/gmake"
+      - "/home/dmitry.kropachev/.local/bin/gmake"
+      - "/home/dmitry.kropachev/bin/gmake"
+      - "/home/dmitry.kropachev/.cargo/bin/gmake"
+      - "/usr/local/sbin/gmake"
+      - "/usr/local/bin/gmake"
+      - "/usr/sbin/gmake"
+    found: "/usr/bin/gmake"
+    search_context:
+      ENV{PATH}:
+        - "/home/dmitry.kropachev/.dotnet"
+        - "/home/dmitry.kropachev/.nvm/versions/node/v20.19.4/bin"
+        - "/home/dmitry.kropachev/.sdkman/candidates/java/current/bin"
+        - "/home/dmitry.kropachev/.zshrc.completions/bin"
+        - "/home/dmitry.kropachev/.zshrc.completions/bin"
+        - "/home/dmitry.kropachev/.local/bin"
+        - "/home/dmitry.kropachev/bin"
+        - "/home/dmitry.kropachev/.cargo/bin"
+        - "/home/dmitry.kropachev/.local/bin"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/sbin"
+        - "/bin"
+        - "/usr/games"
+        - "/usr/local/games"
+        - "/snap/bin"
+        - "/snap/bin"
+        - "/home/dmitry.kropachev/.dotnet/tools"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/CMakeDetermineCompiler.cmake:73 (find_program)"
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/CMakeDetermineCXXCompiler.cmake:69 (_cmake_find_compiler)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_CXX_COMPILER"
+    description: "CXX compiler"
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "c++"
+      - "CC"
+      - "g++"
+      - "aCC"
+      - "cl"
+      - "bcc"
+      - "xlC"
+      - "icpx"
+      - "icx"
+      - "clang++"
+    candidate_directories:
+      - "/home/dmitry.kropachev/.dotnet/"
+      - "/home/dmitry.kropachev/.nvm/versions/node/v20.19.4/bin/"
+      - "/home/dmitry.kropachev/.sdkman/candidates/java/current/bin/"
+      - "/home/dmitry.kropachev/.zshrc.completions/bin/"
+      - "/home/dmitry.kropachev/.local/bin/"
+      - "/home/dmitry.kropachev/bin/"
+      - "/home/dmitry.kropachev/.cargo/bin/"
+      - "/usr/local/sbin/"
+      - "/usr/local/bin/"
+      - "/usr/sbin/"
+      - "/usr/bin/"
+      - "/sbin/"
+      - "/bin/"
+      - "/usr/games/"
+      - "/usr/local/games/"
+      - "/snap/bin/"
+      - "/home/dmitry.kropachev/.dotnet/tools/"
+    searched_directories:
+      - "/home/dmitry.kropachev/.dotnet/c++"
+      - "/home/dmitry.kropachev/.nvm/versions/node/v20.19.4/bin/c++"
+      - "/home/dmitry.kropachev/.sdkman/candidates/java/current/bin/c++"
+      - "/home/dmitry.kropachev/.zshrc.completions/bin/c++"
+      - "/home/dmitry.kropachev/.local/bin/c++"
+      - "/home/dmitry.kropachev/bin/c++"
+      - "/home/dmitry.kropachev/.cargo/bin/c++"
+      - "/usr/local/sbin/c++"
+      - "/usr/local/bin/c++"
+      - "/usr/sbin/c++"
+    found: "/usr/bin/c++"
+    search_context:
+      ENV{PATH}:
+        - "/home/dmitry.kropachev/.dotnet"
+        - "/home/dmitry.kropachev/.nvm/versions/node/v20.19.4/bin"
+        - "/home/dmitry.kropachev/.sdkman/candidates/java/current/bin"
+        - "/home/dmitry.kropachev/.zshrc.completions/bin"
+        - "/home/dmitry.kropachev/.zshrc.completions/bin"
+        - "/home/dmitry.kropachev/.local/bin"
+        - "/home/dmitry.kropachev/bin"
+        - "/home/dmitry.kropachev/.cargo/bin"
+        - "/home/dmitry.kropachev/.local/bin"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/sbin"
+        - "/bin"
+        - "/usr/games"
+        - "/usr/local/games"
+        - "/snap/bin"
+        - "/snap/bin"
+        - "/home/dmitry.kropachev/.dotnet/tools"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/CMakeDetermineCompilerId.cmake:462 (find_file)"
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/CMakeDetermineCompilerId.cmake:500 (CMAKE_DETERMINE_COMPILER_ID_WRITE)"
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/CMakeDetermineCompilerId.cmake:8 (CMAKE_DETERMINE_COMPILER_ID_BUILD)"
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/CMakeDetermineCXXCompiler.cmake:125 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "file"
+    variable: "src_in"
+    description: "Path to a file."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "CMakeCXXCompilerId.cpp.in"
+    candidate_directories:
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/"
+    found: "/opt/cmake-4.2.0/share/cmake-4.2/Modules/CMakeCXXCompilerId.cpp.in"
+    search_context:
+      ENV{PATH}:
+        - "/home/dmitry.kropachev/.dotnet"
+        - "/home/dmitry.kropachev/.nvm/versions/node/v20.19.4/bin"
+        - "/home/dmitry.kropachev/.sdkman/candidates/java/current/bin"
+        - "/home/dmitry.kropachev/.zshrc.completions/bin"
+        - "/home/dmitry.kropachev/.zshrc.completions/bin"
+        - "/home/dmitry.kropachev/.local/bin"
+        - "/home/dmitry.kropachev/bin"
+        - "/home/dmitry.kropachev/.cargo/bin"
+        - "/home/dmitry.kropachev/.local/bin"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/sbin"
+        - "/bin"
+        - "/usr/games"
+        - "/usr/local/games"
+        - "/snap/bin"
+        - "/snap/bin"
+        - "/home/dmitry.kropachev/.dotnet/tools"
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/CMakeDetermineCXXCompiler.cmake:125 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" succeeded.
+      Compiler: /usr/bin/c++ 
+      Build flags: 
+      Id flags:  
+      
+      The output was:
+      0
+      
+      
+      Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "a.out"
+      
+      The CXX compiler identification is GNU, found in:
+        /extra/scylladb/latte/driver-adapters/cpp-driver/build/CMakeFiles/4.2.0/CompilerIdCXX/a.out
+      
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/CMakeFindBinUtils.cmake:243 (find_program)"
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/CMakeDetermineCXXCompiler.cmake:206 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_AR"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "ar"
+    candidate_directories:
+      - "/usr/bin/"
+      - "/home/dmitry.kropachev/.dotnet/"
+      - "/home/dmitry.kropachev/.nvm/versions/node/v20.19.4/bin/"
+      - "/home/dmitry.kropachev/.sdkman/candidates/java/current/bin/"
+      - "/home/dmitry.kropachev/.zshrc.completions/bin/"
+      - "/home/dmitry.kropachev/.local/bin/"
+      - "/home/dmitry.kropachev/bin/"
+      - "/home/dmitry.kropachev/.cargo/bin/"
+      - "/usr/local/sbin/"
+      - "/usr/local/bin/"
+      - "/usr/sbin/"
+      - "/sbin/"
+      - "/bin/"
+      - "/usr/games/"
+      - "/usr/local/games/"
+      - "/snap/bin/"
+      - "/home/dmitry.kropachev/.dotnet/tools/"
+    found: "/usr/bin/ar"
+    search_context:
+      ENV{PATH}:
+        - "/home/dmitry.kropachev/.dotnet"
+        - "/home/dmitry.kropachev/.nvm/versions/node/v20.19.4/bin"
+        - "/home/dmitry.kropachev/.sdkman/candidates/java/current/bin"
+        - "/home/dmitry.kropachev/.zshrc.completions/bin"
+        - "/home/dmitry.kropachev/.zshrc.completions/bin"
+        - "/home/dmitry.kropachev/.local/bin"
+        - "/home/dmitry.kropachev/bin"
+        - "/home/dmitry.kropachev/.cargo/bin"
+        - "/home/dmitry.kropachev/.local/bin"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/sbin"
+        - "/bin"
+        - "/usr/games"
+        - "/usr/local/games"
+        - "/snap/bin"
+        - "/snap/bin"
+        - "/home/dmitry.kropachev/.dotnet/tools"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/CMakeFindBinUtils.cmake:243 (find_program)"
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/CMakeDetermineCXXCompiler.cmake:206 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_RANLIB"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "ranlib"
+    candidate_directories:
+      - "/usr/bin/"
+      - "/home/dmitry.kropachev/.dotnet/"
+      - "/home/dmitry.kropachev/.nvm/versions/node/v20.19.4/bin/"
+      - "/home/dmitry.kropachev/.sdkman/candidates/java/current/bin/"
+      - "/home/dmitry.kropachev/.zshrc.completions/bin/"
+      - "/home/dmitry.kropachev/.local/bin/"
+      - "/home/dmitry.kropachev/bin/"
+      - "/home/dmitry.kropachev/.cargo/bin/"
+      - "/usr/local/sbin/"
+      - "/usr/local/bin/"
+      - "/usr/sbin/"
+      - "/sbin/"
+      - "/bin/"
+      - "/usr/games/"
+      - "/usr/local/games/"
+      - "/snap/bin/"
+      - "/home/dmitry.kropachev/.dotnet/tools/"
+    found: "/usr/bin/ranlib"
+    search_context:
+      ENV{PATH}:
+        - "/home/dmitry.kropachev/.dotnet"
+        - "/home/dmitry.kropachev/.nvm/versions/node/v20.19.4/bin"
+        - "/home/dmitry.kropachev/.sdkman/candidates/java/current/bin"
+        - "/home/dmitry.kropachev/.zshrc.completions/bin"
+        - "/home/dmitry.kropachev/.zshrc.completions/bin"
+        - "/home/dmitry.kropachev/.local/bin"
+        - "/home/dmitry.kropachev/bin"
+        - "/home/dmitry.kropachev/.cargo/bin"
+        - "/home/dmitry.kropachev/.local/bin"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/sbin"
+        - "/bin"
+        - "/usr/games"
+        - "/usr/local/games"
+        - "/snap/bin"
+        - "/snap/bin"
+        - "/home/dmitry.kropachev/.dotnet/tools"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/CMakeFindBinUtils.cmake:243 (find_program)"
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/CMakeDetermineCXXCompiler.cmake:206 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_STRIP"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "strip"
+    candidate_directories:
+      - "/usr/bin/"
+      - "/home/dmitry.kropachev/.dotnet/"
+      - "/home/dmitry.kropachev/.nvm/versions/node/v20.19.4/bin/"
+      - "/home/dmitry.kropachev/.sdkman/candidates/java/current/bin/"
+      - "/home/dmitry.kropachev/.zshrc.completions/bin/"
+      - "/home/dmitry.kropachev/.local/bin/"
+      - "/home/dmitry.kropachev/bin/"
+      - "/home/dmitry.kropachev/.cargo/bin/"
+      - "/usr/local/sbin/"
+      - "/usr/local/bin/"
+      - "/usr/sbin/"
+      - "/sbin/"
+      - "/bin/"
+      - "/usr/games/"
+      - "/usr/local/games/"
+      - "/snap/bin/"
+      - "/home/dmitry.kropachev/.dotnet/tools/"
+    found: "/usr/bin/strip"
+    search_context:
+      ENV{PATH}:
+        - "/home/dmitry.kropachev/.dotnet"
+        - "/home/dmitry.kropachev/.nvm/versions/node/v20.19.4/bin"
+        - "/home/dmitry.kropachev/.sdkman/candidates/java/current/bin"
+        - "/home/dmitry.kropachev/.zshrc.completions/bin"
+        - "/home/dmitry.kropachev/.zshrc.completions/bin"
+        - "/home/dmitry.kropachev/.local/bin"
+        - "/home/dmitry.kropachev/bin"
+        - "/home/dmitry.kropachev/.cargo/bin"
+        - "/home/dmitry.kropachev/.local/bin"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/sbin"
+        - "/bin"
+        - "/usr/games"
+        - "/usr/local/games"
+        - "/snap/bin"
+        - "/snap/bin"
+        - "/home/dmitry.kropachev/.dotnet/tools"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/CMakeFindBinUtils.cmake:243 (find_program)"
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/CMakeDetermineCXXCompiler.cmake:206 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_LINKER"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "ld"
+    candidate_directories:
+      - "/usr/bin/"
+      - "/home/dmitry.kropachev/.dotnet/"
+      - "/home/dmitry.kropachev/.nvm/versions/node/v20.19.4/bin/"
+      - "/home/dmitry.kropachev/.sdkman/candidates/java/current/bin/"
+      - "/home/dmitry.kropachev/.zshrc.completions/bin/"
+      - "/home/dmitry.kropachev/.local/bin/"
+      - "/home/dmitry.kropachev/bin/"
+      - "/home/dmitry.kropachev/.cargo/bin/"
+      - "/usr/local/sbin/"
+      - "/usr/local/bin/"
+      - "/usr/sbin/"
+      - "/sbin/"
+      - "/bin/"
+      - "/usr/games/"
+      - "/usr/local/games/"
+      - "/snap/bin/"
+      - "/home/dmitry.kropachev/.dotnet/tools/"
+    found: "/usr/bin/ld"
+    search_context:
+      ENV{PATH}:
+        - "/home/dmitry.kropachev/.dotnet"
+        - "/home/dmitry.kropachev/.nvm/versions/node/v20.19.4/bin"
+        - "/home/dmitry.kropachev/.sdkman/candidates/java/current/bin"
+        - "/home/dmitry.kropachev/.zshrc.completions/bin"
+        - "/home/dmitry.kropachev/.zshrc.completions/bin"
+        - "/home/dmitry.kropachev/.local/bin"
+        - "/home/dmitry.kropachev/bin"
+        - "/home/dmitry.kropachev/.cargo/bin"
+        - "/home/dmitry.kropachev/.local/bin"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/sbin"
+        - "/bin"
+        - "/usr/games"
+        - "/usr/local/games"
+        - "/snap/bin"
+        - "/snap/bin"
+        - "/home/dmitry.kropachev/.dotnet/tools"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/CMakeFindBinUtils.cmake:243 (find_program)"
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/CMakeDetermineCXXCompiler.cmake:206 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_NM"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "nm"
+    candidate_directories:
+      - "/usr/bin/"
+      - "/home/dmitry.kropachev/.dotnet/"
+      - "/home/dmitry.kropachev/.nvm/versions/node/v20.19.4/bin/"
+      - "/home/dmitry.kropachev/.sdkman/candidates/java/current/bin/"
+      - "/home/dmitry.kropachev/.zshrc.completions/bin/"
+      - "/home/dmitry.kropachev/.local/bin/"
+      - "/home/dmitry.kropachev/bin/"
+      - "/home/dmitry.kropachev/.cargo/bin/"
+      - "/usr/local/sbin/"
+      - "/usr/local/bin/"
+      - "/usr/sbin/"
+      - "/sbin/"
+      - "/bin/"
+      - "/usr/games/"
+      - "/usr/local/games/"
+      - "/snap/bin/"
+      - "/home/dmitry.kropachev/.dotnet/tools/"
+    found: "/usr/bin/nm"
+    search_context:
+      ENV{PATH}:
+        - "/home/dmitry.kropachev/.dotnet"
+        - "/home/dmitry.kropachev/.nvm/versions/node/v20.19.4/bin"
+        - "/home/dmitry.kropachev/.sdkman/candidates/java/current/bin"
+        - "/home/dmitry.kropachev/.zshrc.completions/bin"
+        - "/home/dmitry.kropachev/.zshrc.completions/bin"
+        - "/home/dmitry.kropachev/.local/bin"
+        - "/home/dmitry.kropachev/bin"
+        - "/home/dmitry.kropachev/.cargo/bin"
+        - "/home/dmitry.kropachev/.local/bin"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/sbin"
+        - "/bin"
+        - "/usr/games"
+        - "/usr/local/games"
+        - "/snap/bin"
+        - "/snap/bin"
+        - "/home/dmitry.kropachev/.dotnet/tools"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/CMakeFindBinUtils.cmake:243 (find_program)"
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/CMakeDetermineCXXCompiler.cmake:206 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_OBJDUMP"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "objdump"
+    candidate_directories:
+      - "/usr/bin/"
+      - "/home/dmitry.kropachev/.dotnet/"
+      - "/home/dmitry.kropachev/.nvm/versions/node/v20.19.4/bin/"
+      - "/home/dmitry.kropachev/.sdkman/candidates/java/current/bin/"
+      - "/home/dmitry.kropachev/.zshrc.completions/bin/"
+      - "/home/dmitry.kropachev/.local/bin/"
+      - "/home/dmitry.kropachev/bin/"
+      - "/home/dmitry.kropachev/.cargo/bin/"
+      - "/usr/local/sbin/"
+      - "/usr/local/bin/"
+      - "/usr/sbin/"
+      - "/sbin/"
+      - "/bin/"
+      - "/usr/games/"
+      - "/usr/local/games/"
+      - "/snap/bin/"
+      - "/home/dmitry.kropachev/.dotnet/tools/"
+    found: "/usr/bin/objdump"
+    search_context:
+      ENV{PATH}:
+        - "/home/dmitry.kropachev/.dotnet"
+        - "/home/dmitry.kropachev/.nvm/versions/node/v20.19.4/bin"
+        - "/home/dmitry.kropachev/.sdkman/candidates/java/current/bin"
+        - "/home/dmitry.kropachev/.zshrc.completions/bin"
+        - "/home/dmitry.kropachev/.zshrc.completions/bin"
+        - "/home/dmitry.kropachev/.local/bin"
+        - "/home/dmitry.kropachev/bin"
+        - "/home/dmitry.kropachev/.cargo/bin"
+        - "/home/dmitry.kropachev/.local/bin"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/sbin"
+        - "/bin"
+        - "/usr/games"
+        - "/usr/local/games"
+        - "/snap/bin"
+        - "/snap/bin"
+        - "/home/dmitry.kropachev/.dotnet/tools"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/CMakeFindBinUtils.cmake:243 (find_program)"
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/CMakeDetermineCXXCompiler.cmake:206 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_OBJCOPY"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "objcopy"
+    candidate_directories:
+      - "/usr/bin/"
+      - "/home/dmitry.kropachev/.dotnet/"
+      - "/home/dmitry.kropachev/.nvm/versions/node/v20.19.4/bin/"
+      - "/home/dmitry.kropachev/.sdkman/candidates/java/current/bin/"
+      - "/home/dmitry.kropachev/.zshrc.completions/bin/"
+      - "/home/dmitry.kropachev/.local/bin/"
+      - "/home/dmitry.kropachev/bin/"
+      - "/home/dmitry.kropachev/.cargo/bin/"
+      - "/usr/local/sbin/"
+      - "/usr/local/bin/"
+      - "/usr/sbin/"
+      - "/sbin/"
+      - "/bin/"
+      - "/usr/games/"
+      - "/usr/local/games/"
+      - "/snap/bin/"
+      - "/home/dmitry.kropachev/.dotnet/tools/"
+    found: "/usr/bin/objcopy"
+    search_context:
+      ENV{PATH}:
+        - "/home/dmitry.kropachev/.dotnet"
+        - "/home/dmitry.kropachev/.nvm/versions/node/v20.19.4/bin"
+        - "/home/dmitry.kropachev/.sdkman/candidates/java/current/bin"
+        - "/home/dmitry.kropachev/.zshrc.completions/bin"
+        - "/home/dmitry.kropachev/.zshrc.completions/bin"
+        - "/home/dmitry.kropachev/.local/bin"
+        - "/home/dmitry.kropachev/bin"
+        - "/home/dmitry.kropachev/.cargo/bin"
+        - "/home/dmitry.kropachev/.local/bin"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/sbin"
+        - "/bin"
+        - "/usr/games"
+        - "/usr/local/games"
+        - "/snap/bin"
+        - "/snap/bin"
+        - "/home/dmitry.kropachev/.dotnet/tools"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/CMakeFindBinUtils.cmake:243 (find_program)"
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/CMakeDetermineCXXCompiler.cmake:206 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_READELF"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "readelf"
+    candidate_directories:
+      - "/usr/bin/"
+      - "/home/dmitry.kropachev/.dotnet/"
+      - "/home/dmitry.kropachev/.nvm/versions/node/v20.19.4/bin/"
+      - "/home/dmitry.kropachev/.sdkman/candidates/java/current/bin/"
+      - "/home/dmitry.kropachev/.zshrc.completions/bin/"
+      - "/home/dmitry.kropachev/.local/bin/"
+      - "/home/dmitry.kropachev/bin/"
+      - "/home/dmitry.kropachev/.cargo/bin/"
+      - "/usr/local/sbin/"
+      - "/usr/local/bin/"
+      - "/usr/sbin/"
+      - "/sbin/"
+      - "/bin/"
+      - "/usr/games/"
+      - "/usr/local/games/"
+      - "/snap/bin/"
+      - "/home/dmitry.kropachev/.dotnet/tools/"
+    found: "/usr/bin/readelf"
+    search_context:
+      ENV{PATH}:
+        - "/home/dmitry.kropachev/.dotnet"
+        - "/home/dmitry.kropachev/.nvm/versions/node/v20.19.4/bin"
+        - "/home/dmitry.kropachev/.sdkman/candidates/java/current/bin"
+        - "/home/dmitry.kropachev/.zshrc.completions/bin"
+        - "/home/dmitry.kropachev/.zshrc.completions/bin"
+        - "/home/dmitry.kropachev/.local/bin"
+        - "/home/dmitry.kropachev/bin"
+        - "/home/dmitry.kropachev/.cargo/bin"
+        - "/home/dmitry.kropachev/.local/bin"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/sbin"
+        - "/bin"
+        - "/usr/games"
+        - "/usr/local/games"
+        - "/snap/bin"
+        - "/snap/bin"
+        - "/home/dmitry.kropachev/.dotnet/tools"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/CMakeFindBinUtils.cmake:243 (find_program)"
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/CMakeDetermineCXXCompiler.cmake:206 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_DLLTOOL"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "dlltool"
+    candidate_directories:
+      - "/usr/bin/"
+      - "/home/dmitry.kropachev/.dotnet/"
+      - "/home/dmitry.kropachev/.nvm/versions/node/v20.19.4/bin/"
+      - "/home/dmitry.kropachev/.sdkman/candidates/java/current/bin/"
+      - "/home/dmitry.kropachev/.zshrc.completions/bin/"
+      - "/home/dmitry.kropachev/.local/bin/"
+      - "/home/dmitry.kropachev/bin/"
+      - "/home/dmitry.kropachev/.cargo/bin/"
+      - "/usr/local/sbin/"
+      - "/usr/local/bin/"
+      - "/usr/sbin/"
+      - "/sbin/"
+      - "/bin/"
+      - "/usr/games/"
+      - "/usr/local/games/"
+      - "/snap/bin/"
+      - "/home/dmitry.kropachev/.dotnet/tools/"
+    searched_directories:
+      - "/usr/bin/dlltool"
+      - "/home/dmitry.kropachev/.dotnet/dlltool"
+      - "/home/dmitry.kropachev/.nvm/versions/node/v20.19.4/bin/dlltool"
+      - "/home/dmitry.kropachev/.sdkman/candidates/java/current/bin/dlltool"
+      - "/home/dmitry.kropachev/.zshrc.completions/bin/dlltool"
+      - "/home/dmitry.kropachev/.local/bin/dlltool"
+      - "/home/dmitry.kropachev/bin/dlltool"
+      - "/home/dmitry.kropachev/.cargo/bin/dlltool"
+      - "/usr/local/sbin/dlltool"
+      - "/usr/local/bin/dlltool"
+      - "/usr/sbin/dlltool"
+      - "/sbin/dlltool"
+      - "/bin/dlltool"
+      - "/usr/games/dlltool"
+      - "/usr/local/games/dlltool"
+      - "/snap/bin/dlltool"
+      - "/home/dmitry.kropachev/.dotnet/tools/dlltool"
+    found: false
+    search_context:
+      ENV{PATH}:
+        - "/home/dmitry.kropachev/.dotnet"
+        - "/home/dmitry.kropachev/.nvm/versions/node/v20.19.4/bin"
+        - "/home/dmitry.kropachev/.sdkman/candidates/java/current/bin"
+        - "/home/dmitry.kropachev/.zshrc.completions/bin"
+        - "/home/dmitry.kropachev/.zshrc.completions/bin"
+        - "/home/dmitry.kropachev/.local/bin"
+        - "/home/dmitry.kropachev/bin"
+        - "/home/dmitry.kropachev/.cargo/bin"
+        - "/home/dmitry.kropachev/.local/bin"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/sbin"
+        - "/bin"
+        - "/usr/games"
+        - "/usr/local/games"
+        - "/snap/bin"
+        - "/snap/bin"
+        - "/home/dmitry.kropachev/.dotnet/tools"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/CMakeFindBinUtils.cmake:243 (find_program)"
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/CMakeDetermineCXXCompiler.cmake:206 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_ADDR2LINE"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "addr2line"
+    candidate_directories:
+      - "/usr/bin/"
+      - "/home/dmitry.kropachev/.dotnet/"
+      - "/home/dmitry.kropachev/.nvm/versions/node/v20.19.4/bin/"
+      - "/home/dmitry.kropachev/.sdkman/candidates/java/current/bin/"
+      - "/home/dmitry.kropachev/.zshrc.completions/bin/"
+      - "/home/dmitry.kropachev/.local/bin/"
+      - "/home/dmitry.kropachev/bin/"
+      - "/home/dmitry.kropachev/.cargo/bin/"
+      - "/usr/local/sbin/"
+      - "/usr/local/bin/"
+      - "/usr/sbin/"
+      - "/sbin/"
+      - "/bin/"
+      - "/usr/games/"
+      - "/usr/local/games/"
+      - "/snap/bin/"
+      - "/home/dmitry.kropachev/.dotnet/tools/"
+    found: "/usr/bin/addr2line"
+    search_context:
+      ENV{PATH}:
+        - "/home/dmitry.kropachev/.dotnet"
+        - "/home/dmitry.kropachev/.nvm/versions/node/v20.19.4/bin"
+        - "/home/dmitry.kropachev/.sdkman/candidates/java/current/bin"
+        - "/home/dmitry.kropachev/.zshrc.completions/bin"
+        - "/home/dmitry.kropachev/.zshrc.completions/bin"
+        - "/home/dmitry.kropachev/.local/bin"
+        - "/home/dmitry.kropachev/bin"
+        - "/home/dmitry.kropachev/.cargo/bin"
+        - "/home/dmitry.kropachev/.local/bin"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/sbin"
+        - "/bin"
+        - "/usr/games"
+        - "/usr/local/games"
+        - "/snap/bin"
+        - "/snap/bin"
+        - "/home/dmitry.kropachev/.dotnet/tools"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/CMakeFindBinUtils.cmake:243 (find_program)"
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/CMakeDetermineCXXCompiler.cmake:206 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_TAPI"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "tapi"
+    candidate_directories:
+      - "/usr/bin/"
+      - "/home/dmitry.kropachev/.dotnet/"
+      - "/home/dmitry.kropachev/.nvm/versions/node/v20.19.4/bin/"
+      - "/home/dmitry.kropachev/.sdkman/candidates/java/current/bin/"
+      - "/home/dmitry.kropachev/.zshrc.completions/bin/"
+      - "/home/dmitry.kropachev/.local/bin/"
+      - "/home/dmitry.kropachev/bin/"
+      - "/home/dmitry.kropachev/.cargo/bin/"
+      - "/usr/local/sbin/"
+      - "/usr/local/bin/"
+      - "/usr/sbin/"
+      - "/sbin/"
+      - "/bin/"
+      - "/usr/games/"
+      - "/usr/local/games/"
+      - "/snap/bin/"
+      - "/home/dmitry.kropachev/.dotnet/tools/"
+    searched_directories:
+      - "/usr/bin/tapi"
+      - "/home/dmitry.kropachev/.dotnet/tapi"
+      - "/home/dmitry.kropachev/.nvm/versions/node/v20.19.4/bin/tapi"
+      - "/home/dmitry.kropachev/.sdkman/candidates/java/current/bin/tapi"
+      - "/home/dmitry.kropachev/.zshrc.completions/bin/tapi"
+      - "/home/dmitry.kropachev/.local/bin/tapi"
+      - "/home/dmitry.kropachev/bin/tapi"
+      - "/home/dmitry.kropachev/.cargo/bin/tapi"
+      - "/usr/local/sbin/tapi"
+      - "/usr/local/bin/tapi"
+      - "/usr/sbin/tapi"
+      - "/sbin/tapi"
+      - "/bin/tapi"
+      - "/usr/games/tapi"
+      - "/usr/local/games/tapi"
+      - "/snap/bin/tapi"
+      - "/home/dmitry.kropachev/.dotnet/tools/tapi"
+    found: false
+    search_context:
+      ENV{PATH}:
+        - "/home/dmitry.kropachev/.dotnet"
+        - "/home/dmitry.kropachev/.nvm/versions/node/v20.19.4/bin"
+        - "/home/dmitry.kropachev/.sdkman/candidates/java/current/bin"
+        - "/home/dmitry.kropachev/.zshrc.completions/bin"
+        - "/home/dmitry.kropachev/.zshrc.completions/bin"
+        - "/home/dmitry.kropachev/.local/bin"
+        - "/home/dmitry.kropachev/bin"
+        - "/home/dmitry.kropachev/.cargo/bin"
+        - "/home/dmitry.kropachev/.local/bin"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/sbin"
+        - "/bin"
+        - "/usr/games"
+        - "/usr/local/games"
+        - "/snap/bin"
+        - "/snap/bin"
+        - "/home/dmitry.kropachev/.dotnet/tools"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/Compiler/GNU-FindBinUtils.cmake:18 (find_program)"
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/CMakeDetermineCXXCompiler.cmake:207 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_CXX_COMPILER_AR"
+    description: "A wrapper around 'ar' adding the appropriate '--plugin' option for the GCC compiler"
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "gcc-ar-11.4"
+      - "gcc-ar-11"
+      - "gcc-ar11"
+      - "gcc-ar"
+    candidate_directories:
+      - "/usr/bin/"
+      - "/home/dmitry.kropachev/.dotnet/"
+      - "/home/dmitry.kropachev/.nvm/versions/node/v20.19.4/bin/"
+      - "/home/dmitry.kropachev/.sdkman/candidates/java/current/bin/"
+      - "/home/dmitry.kropachev/.zshrc.completions/bin/"
+      - "/home/dmitry.kropachev/.local/bin/"
+      - "/home/dmitry.kropachev/bin/"
+      - "/home/dmitry.kropachev/.cargo/bin/"
+      - "/usr/local/sbin/"
+      - "/usr/local/bin/"
+      - "/usr/sbin/"
+      - "/sbin/"
+      - "/bin/"
+      - "/usr/games/"
+      - "/usr/local/games/"
+      - "/snap/bin/"
+      - "/home/dmitry.kropachev/.dotnet/tools/"
+    searched_directories:
+      - "/usr/bin/gcc-ar-11.4"
+      - "/home/dmitry.kropachev/.dotnet/gcc-ar-11.4"
+      - "/home/dmitry.kropachev/.nvm/versions/node/v20.19.4/bin/gcc-ar-11.4"
+      - "/home/dmitry.kropachev/.sdkman/candidates/java/current/bin/gcc-ar-11.4"
+      - "/home/dmitry.kropachev/.zshrc.completions/bin/gcc-ar-11.4"
+      - "/home/dmitry.kropachev/.local/bin/gcc-ar-11.4"
+      - "/home/dmitry.kropachev/bin/gcc-ar-11.4"
+      - "/home/dmitry.kropachev/.cargo/bin/gcc-ar-11.4"
+      - "/usr/local/sbin/gcc-ar-11.4"
+      - "/usr/local/bin/gcc-ar-11.4"
+      - "/usr/sbin/gcc-ar-11.4"
+      - "/sbin/gcc-ar-11.4"
+      - "/bin/gcc-ar-11.4"
+      - "/usr/games/gcc-ar-11.4"
+      - "/usr/local/games/gcc-ar-11.4"
+      - "/snap/bin/gcc-ar-11.4"
+      - "/home/dmitry.kropachev/.dotnet/tools/gcc-ar-11.4"
+    found: "/usr/bin/gcc-ar-11"
+    search_context:
+      ENV{PATH}:
+        - "/home/dmitry.kropachev/.dotnet"
+        - "/home/dmitry.kropachev/.nvm/versions/node/v20.19.4/bin"
+        - "/home/dmitry.kropachev/.sdkman/candidates/java/current/bin"
+        - "/home/dmitry.kropachev/.zshrc.completions/bin"
+        - "/home/dmitry.kropachev/.zshrc.completions/bin"
+        - "/home/dmitry.kropachev/.local/bin"
+        - "/home/dmitry.kropachev/bin"
+        - "/home/dmitry.kropachev/.cargo/bin"
+        - "/home/dmitry.kropachev/.local/bin"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/sbin"
+        - "/bin"
+        - "/usr/games"
+        - "/usr/local/games"
+        - "/snap/bin"
+        - "/snap/bin"
+        - "/home/dmitry.kropachev/.dotnet/tools"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/Compiler/GNU-FindBinUtils.cmake:30 (find_program)"
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/CMakeDetermineCXXCompiler.cmake:207 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_CXX_COMPILER_RANLIB"
+    description: "A wrapper around 'ranlib' adding the appropriate '--plugin' option for the GCC compiler"
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "gcc-ranlib-11.4"
+      - "gcc-ranlib-11"
+      - "gcc-ranlib11"
+      - "gcc-ranlib"
+    candidate_directories:
+      - "/usr/bin/"
+      - "/home/dmitry.kropachev/.dotnet/"
+      - "/home/dmitry.kropachev/.nvm/versions/node/v20.19.4/bin/"
+      - "/home/dmitry.kropachev/.sdkman/candidates/java/current/bin/"
+      - "/home/dmitry.kropachev/.zshrc.completions/bin/"
+      - "/home/dmitry.kropachev/.local/bin/"
+      - "/home/dmitry.kropachev/bin/"
+      - "/home/dmitry.kropachev/.cargo/bin/"
+      - "/usr/local/sbin/"
+      - "/usr/local/bin/"
+      - "/usr/sbin/"
+      - "/sbin/"
+      - "/bin/"
+      - "/usr/games/"
+      - "/usr/local/games/"
+      - "/snap/bin/"
+      - "/home/dmitry.kropachev/.dotnet/tools/"
+    searched_directories:
+      - "/usr/bin/gcc-ranlib-11.4"
+      - "/home/dmitry.kropachev/.dotnet/gcc-ranlib-11.4"
+      - "/home/dmitry.kropachev/.nvm/versions/node/v20.19.4/bin/gcc-ranlib-11.4"
+      - "/home/dmitry.kropachev/.sdkman/candidates/java/current/bin/gcc-ranlib-11.4"
+      - "/home/dmitry.kropachev/.zshrc.completions/bin/gcc-ranlib-11.4"
+      - "/home/dmitry.kropachev/.local/bin/gcc-ranlib-11.4"
+      - "/home/dmitry.kropachev/bin/gcc-ranlib-11.4"
+      - "/home/dmitry.kropachev/.cargo/bin/gcc-ranlib-11.4"
+      - "/usr/local/sbin/gcc-ranlib-11.4"
+      - "/usr/local/bin/gcc-ranlib-11.4"
+      - "/usr/sbin/gcc-ranlib-11.4"
+      - "/sbin/gcc-ranlib-11.4"
+      - "/bin/gcc-ranlib-11.4"
+      - "/usr/games/gcc-ranlib-11.4"
+      - "/usr/local/games/gcc-ranlib-11.4"
+      - "/snap/bin/gcc-ranlib-11.4"
+      - "/home/dmitry.kropachev/.dotnet/tools/gcc-ranlib-11.4"
+    found: "/usr/bin/gcc-ranlib-11"
+    search_context:
+      ENV{PATH}:
+        - "/home/dmitry.kropachev/.dotnet"
+        - "/home/dmitry.kropachev/.nvm/versions/node/v20.19.4/bin"
+        - "/home/dmitry.kropachev/.sdkman/candidates/java/current/bin"
+        - "/home/dmitry.kropachev/.zshrc.completions/bin"
+        - "/home/dmitry.kropachev/.zshrc.completions/bin"
+        - "/home/dmitry.kropachev/.local/bin"
+        - "/home/dmitry.kropachev/bin"
+        - "/home/dmitry.kropachev/.cargo/bin"
+        - "/home/dmitry.kropachev/.local/bin"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/sbin"
+        - "/bin"
+        - "/usr/games"
+        - "/usr/local/games"
+        - "/snap/bin"
+        - "/snap/bin"
+        - "/home/dmitry.kropachev/.dotnet/tools"
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/CMakeDetermineCompilerABI.cmake:83 (try_compile)"
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:2 (project)"
+    checks:
+      - "Detecting CXX compiler ABI info"
+    directories:
+      source: "/extra/scylladb/latte/driver-adapters/cpp-driver/build/CMakeFiles/CMakeScratch/TryCompile-yHilEV"
+      binary: "/extra/scylladb/latte/driver-adapters/cpp-driver/build/CMakeFiles/CMakeScratch/TryCompile-yHilEV"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: ""
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_CXX_SCAN_FOR_MODULES: "OFF"
+      CMAKE_EXE_LINKER_FLAGS: ""
+    buildResult:
+      variable: "CMAKE_CXX_ABI_COMPILED"
+      cached: true
+      stdout: |
+        Change Dir: '/extra/scylladb/latte/driver-adapters/cpp-driver/build/CMakeFiles/CMakeScratch/TryCompile-yHilEV'
+        
+        Run Build Command(s): /opt/cmake-4.2.0/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_126ac/fast
+        gmake[1]: Entering directory '/extra/scylladb/latte/driver-adapters/cpp-driver/build/CMakeFiles/CMakeScratch/TryCompile-yHilEV'
+        /usr/bin/gmake  -f CMakeFiles/cmTC_126ac.dir/build.make CMakeFiles/cmTC_126ac.dir/build
+        gmake[2]: Entering directory '/extra/scylladb/latte/driver-adapters/cpp-driver/build/CMakeFiles/CMakeScratch/TryCompile-yHilEV'
+        Building CXX object CMakeFiles/cmTC_126ac.dir/CMakeCXXCompilerABI.cpp.o
+        /usr/bin/c++   -v -o CMakeFiles/cmTC_126ac.dir/CMakeCXXCompilerABI.cpp.o -c /opt/cmake-4.2.0/share/cmake-4.2/Modules/CMakeCXXCompilerABI.cpp
+        Using built-in specs.
+        COLLECT_GCC=/usr/bin/c++
+        OFFLOAD_TARGET_NAMES=nvptx-none:amdgcn-amdhsa
+        OFFLOAD_TARGET_DEFAULT=1
+        Target: x86_64-linux-gnu
+        Configured with: ../src/configure -v --with-pkgversion='Ubuntu 11.4.0-1ubuntu1~22.04.2' --with-bugurl=file:///usr/share/doc/gcc-11/README.Bugs --enable-languages=c,ada,c++,go,brig,d,fortran,objc,obj-c++,m2 --prefix=/usr --with-gcc-major-version-only --program-suffix=-11 --program-prefix=x86_64-linux-gnu- --enable-shared --enable-linker-build-id --libexecdir=/usr/lib --without-included-gettext --enable-threads=posix --libdir=/usr/lib --enable-nls --enable-bootstrap --enable-clocale=gnu --enable-libstdcxx-debug --enable-libstdcxx-time=yes --with-default-libstdcxx-abi=new --enable-gnu-unique-object --disable-vtable-verify --enable-plugin --enable-default-pie --with-system-zlib --enable-libphobos-checking=release --with-target-system-zlib=auto --enable-objc-gc=auto --enable-multiarch --disable-werror --enable-cet --with-arch-32=i686 --with-abi=m64 --with-multilib-list=m32,m64,mx32 --enable-multilib --with-tune=generic --enable-offload-targets=nvptx-none=/build/gcc-11-2Y5pKs/gcc-11-11.4.0/debian/tmp-nvptx/usr,amdgcn-amdhsa=/build/gcc-11-2Y5pKs/gcc-11-11.4.0/debian/tmp-gcn/usr --without-cuda-driver --enable-checking=release --build=x86_64-linux-gnu --host=x86_64-linux-gnu --target=x86_64-linux-gnu --with-build-config=bootstrap-lto-lean --enable-link-serialization=2
+        Thread model: posix
+        Supported LTO compression algorithms: zlib zstd
+        gcc version 11.4.0 (Ubuntu 11.4.0-1ubuntu1~22.04.2) 
+        COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_126ac.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_126ac.dir/'
+         /usr/lib/gcc/x86_64-linux-gnu/11/cc1plus -quiet -v -imultiarch x86_64-linux-gnu -D_GNU_SOURCE /opt/cmake-4.2.0/share/cmake-4.2/Modules/CMakeCXXCompilerABI.cpp -quiet -dumpdir CMakeFiles/cmTC_126ac.dir/ -dumpbase CMakeCXXCompilerABI.cpp.cpp -dumpbase-ext .cpp -mtune=generic -march=x86-64 -version -fasynchronous-unwind-tables -fstack-protector-strong -Wformat -Wformat-security -fstack-clash-protection -fcf-protection -o /tmp/ccijB11b.s
+        GNU C++17 (Ubuntu 11.4.0-1ubuntu1~22.04.2) version 11.4.0 (x86_64-linux-gnu)
+        	compiled by GNU C version 11.4.0, GMP version 6.2.1, MPFR version 4.1.0, MPC version 1.2.1, isl version isl-0.24-GMP
+        
+        GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072
+        ignoring duplicate directory "/usr/include/x86_64-linux-gnu/c++/11"
+        ignoring nonexistent directory "/usr/local/include/x86_64-linux-gnu"
+        ignoring nonexistent directory "/usr/lib/gcc/x86_64-linux-gnu/11/include-fixed"
+        ignoring nonexistent directory "/usr/lib/gcc/x86_64-linux-gnu/11/../../../../x86_64-linux-gnu/include"
+        #include "..." search starts here:
+        #include <...> search starts here:
+         /usr/include/c++/11
+         /usr/include/x86_64-linux-gnu/c++/11
+         /usr/include/c++/11/backward
+         /usr/lib/gcc/x86_64-linux-gnu/11/include
+         /usr/local/include
+         /usr/include/x86_64-linux-gnu
+         /usr/include
+        End of search list.
+        GNU C++17 (Ubuntu 11.4.0-1ubuntu1~22.04.2) version 11.4.0 (x86_64-linux-gnu)
+        	compiled by GNU C version 11.4.0, GMP version 6.2.1, MPFR version 4.1.0, MPC version 1.2.1, isl version isl-0.24-GMP
+        
+        GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072
+        Compiler executable checksum: 6c87588fc345655b93b8c25f48f88886
+        COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_126ac.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_126ac.dir/'
+         as -v --64 -o CMakeFiles/cmTC_126ac.dir/CMakeCXXCompilerABI.cpp.o /tmp/ccijB11b.s
+        GNU assembler version 2.38 (x86_64-linux-gnu) using BFD version (GNU Binutils for Ubuntu) 2.38
+        COMPILER_PATH=/usr/lib/gcc/x86_64-linux-gnu/11/:/usr/lib/gcc/x86_64-linux-gnu/11/:/usr/lib/gcc/x86_64-linux-gnu/:/usr/lib/gcc/x86_64-linux-gnu/11/:/usr/lib/gcc/x86_64-linux-gnu/
+        LIBRARY_PATH=/usr/lib/gcc/x86_64-linux-gnu/11/:/usr/lib/gcc/x86_64-linux-gnu/11/../../../x86_64-linux-gnu/:/usr/lib/gcc/x86_64-linux-gnu/11/../../../../lib/:/lib/x86_64-linux-gnu/:/lib/../lib/:/usr/lib/x86_64-linux-gnu/:/usr/lib/../lib/:/usr/lib/gcc/x86_64-linux-gnu/11/../../../:/lib/:/usr/lib/
+        COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_126ac.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_126ac.dir/CMakeCXXCompilerABI.cpp.'
+        Linking CXX executable cmTC_126ac
+        /opt/cmake-4.2.0/bin/cmake -E cmake_link_script CMakeFiles/cmTC_126ac.dir/link.txt --verbose=1
+        Using built-in specs.
+        COLLECT_GCC=/usr/bin/c++
+        COLLECT_LTO_WRAPPER=/usr/lib/gcc/x86_64-linux-gnu/11/lto-wrapper
+        OFFLOAD_TARGET_NAMES=nvptx-none:amdgcn-amdhsa
+        OFFLOAD_TARGET_DEFAULT=1
+        Target: x86_64-linux-gnu
+        Configured with: ../src/configure -v --with-pkgversion='Ubuntu 11.4.0-1ubuntu1~22.04.2' --with-bugurl=file:///usr/share/doc/gcc-11/README.Bugs --enable-languages=c,ada,c++,go,brig,d,fortran,objc,obj-c++,m2 --prefix=/usr --with-gcc-major-version-only --program-suffix=-11 --program-prefix=x86_64-linux-gnu- --enable-shared --enable-linker-build-id --libexecdir=/usr/lib --without-included-gettext --enable-threads=posix --libdir=/usr/lib --enable-nls --enable-bootstrap --enable-clocale=gnu --enable-libstdcxx-debug --enable-libstdcxx-time=yes --with-default-libstdcxx-abi=new --enable-gnu-unique-object --disable-vtable-verify --enable-plugin --enable-default-pie --with-system-zlib --enable-libphobos-checking=release --with-target-system-zlib=auto --enable-objc-gc=auto --enable-multiarch --disable-werror --enable-cet --with-arch-32=i686 --with-abi=m64 --with-multilib-list=m32,m64,mx32 --enable-multilib --with-tune=generic --enable-offload-targets=nvptx-none=/build/gcc-11-2Y5pKs/gcc-11-11.4.0/debian/tmp-nvptx/usr,amdgcn-amdhsa=/build/gcc-11-2Y5pKs/gcc-11-11.4.0/debian/tmp-gcn/usr --without-cuda-driver --enable-checking=release --build=x86_64-linux-gnu --host=x86_64-linux-gnu --target=x86_64-linux-gnu --with-build-config=bootstrap-lto-lean --enable-link-serialization=2
+        Thread model: posix
+        Supported LTO compression algorithms: zlib zstd
+        gcc version 11.4.0 (Ubuntu 11.4.0-1ubuntu1~22.04.2) 
+        COMPILER_PATH=/usr/lib/gcc/x86_64-linux-gnu/11/:/usr/lib/gcc/x86_64-linux-gnu/11/:/usr/lib/gcc/x86_64-linux-gnu/:/usr/lib/gcc/x86_64-linux-gnu/11/:/usr/lib/gcc/x86_64-linux-gnu/
+        LIBRARY_PATH=/usr/lib/gcc/x86_64-linux-gnu/11/:/usr/lib/gcc/x86_64-linux-gnu/11/../../../x86_64-linux-gnu/:/usr/lib/gcc/x86_64-linux-gnu/11/../../../../lib/:/lib/x86_64-linux-gnu/:/lib/../lib/:/usr/lib/x86_64-linux-gnu/:/usr/lib/../lib/:/usr/lib/gcc/x86_64-linux-gnu/11/../../../:/lib/:/usr/lib/
+        COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_126ac' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'cmTC_126ac.'
+         /usr/lib/gcc/x86_64-linux-gnu/11/collect2 -plugin /usr/lib/gcc/x86_64-linux-gnu/11/liblto_plugin.so -plugin-opt=/usr/lib/gcc/x86_64-linux-gnu/11/lto-wrapper -plugin-opt=-fresolution=/tmp/cchrukUh.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --build-id --eh-frame-hdr -m elf_x86_64 --hash-style=gnu --as-needed -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -z now -z relro -o cmTC_126ac /usr/lib/gcc/x86_64-linux-gnu/11/../../../x86_64-linux-gnu/Scrt1.o /usr/lib/gcc/x86_64-linux-gnu/11/../../../x86_64-linux-gnu/crti.o /usr/lib/gcc/x86_64-linux-gnu/11/crtbeginS.o -L/usr/lib/gcc/x86_64-linux-gnu/11 -L/usr/lib/gcc/x86_64-linux-gnu/11/../../../x86_64-linux-gnu -L/usr/lib/gcc/x86_64-linux-gnu/11/../../../../lib -L/lib/x86_64-linux-gnu -L/lib/../lib -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-linux-gnu/11/../../.. -v CMakeFiles/cmTC_126ac.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /usr/lib/gcc/x86_64-linux-gnu/11/crtendS.o /usr/lib/gcc/x86_64-linux-gnu/11/../../../x86_64-linux-gnu/crtn.o
+        collect2 version 11.4.0
+        /usr/bin/ld -plugin /usr/lib/gcc/x86_64-linux-gnu/11/liblto_plugin.so -plugin-opt=/usr/lib/gcc/x86_64-linux-gnu/11/lto-wrapper -plugin-opt=-fresolution=/tmp/cchrukUh.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --build-id --eh-frame-hdr -m elf_x86_64 --hash-style=gnu --as-needed -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -z now -z relro -o cmTC_126ac /usr/lib/gcc/x86_64-linux-gnu/11/../../../x86_64-linux-gnu/Scrt1.o /usr/lib/gcc/x86_64-linux-gnu/11/../../../x86_64-linux-gnu/crti.o /usr/lib/gcc/x86_64-linux-gnu/11/crtbeginS.o -L/usr/lib/gcc/x86_64-linux-gnu/11 -L/usr/lib/gcc/x86_64-linux-gnu/11/../../../x86_64-linux-gnu -L/usr/lib/gcc/x86_64-linux-gnu/11/../../../../lib -L/lib/x86_64-linux-gnu -L/lib/../lib -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-linux-gnu/11/../../.. -v CMakeFiles/cmTC_126ac.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /usr/lib/gcc/x86_64-linux-gnu/11/crtendS.o /usr/lib/gcc/x86_64-linux-gnu/11/../../../x86_64-linux-gnu/crtn.o
+        GNU ld (GNU Binutils for Ubuntu) 2.38
+        COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_126ac' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'cmTC_126ac.'
+        /usr/bin/c++  -v -Wl,-v CMakeFiles/cmTC_126ac.dir/CMakeCXXCompilerABI.cpp.o -o cmTC_126ac
+        gmake[2]: Leaving directory '/extra/scylladb/latte/driver-adapters/cpp-driver/build/CMakeFiles/CMakeScratch/TryCompile-yHilEV'
+        gmake[1]: Leaving directory '/extra/scylladb/latte/driver-adapters/cpp-driver/build/CMakeFiles/CMakeScratch/TryCompile-yHilEV'
+        
+      exitCode: 0
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/CMakeDetermineCompilerABI.cmake:217 (message)"
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Parsed CXX implicit include dir info: rv=done
+        found start of include info
+        found start of implicit include info
+          add: [/usr/include/c++/11]
+          add: [/usr/include/x86_64-linux-gnu/c++/11]
+          add: [/usr/include/c++/11/backward]
+          add: [/usr/lib/gcc/x86_64-linux-gnu/11/include]
+          add: [/usr/local/include]
+          add: [/usr/include/x86_64-linux-gnu]
+          add: [/usr/include]
+        end of search list found
+        collapse include dir [/usr/include/c++/11] ==> [/usr/include/c++/11]
+        collapse include dir [/usr/include/x86_64-linux-gnu/c++/11] ==> [/usr/include/x86_64-linux-gnu/c++/11]
+        collapse include dir [/usr/include/c++/11/backward] ==> [/usr/include/c++/11/backward]
+        collapse include dir [/usr/lib/gcc/x86_64-linux-gnu/11/include] ==> [/usr/lib/gcc/x86_64-linux-gnu/11/include]
+        collapse include dir [/usr/local/include] ==> [/usr/local/include]
+        collapse include dir [/usr/include/x86_64-linux-gnu] ==> [/usr/include/x86_64-linux-gnu]
+        collapse include dir [/usr/include] ==> [/usr/include]
+        implicit include dirs: [/usr/include/c++/11;/usr/include/x86_64-linux-gnu/c++/11;/usr/include/c++/11/backward;/usr/lib/gcc/x86_64-linux-gnu/11/include;/usr/local/include;/usr/include/x86_64-linux-gnu;/usr/include]
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/CMakeDetermineCompilerABI.cmake:253 (message)"
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Parsed CXX implicit link information:
+        link line regex: [^( *|.*[/\\])(ld[0-9]*(|\\.[a-rt-z][a-z]*|\\.s[a-np-z][a-z]*|\\.so[a-z]+)|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
+        linker tool regex: [^[ 	]*(->|"|[0-9]+>[ 	-]*Build:[ 	0-9]+ ms[ 	]*)?[ 	]*(([^"]*[/\\])?(ld[0-9]*(|\\.[a-rt-z][a-z]*|\\.s[a-np-z][a-z]*|\\.so[a-z]+)))("|,| |$)]
+        ignore line: [Change Dir: '/extra/scylladb/latte/driver-adapters/cpp-driver/build/CMakeFiles/CMakeScratch/TryCompile-yHilEV']
+        ignore line: []
+        ignore line: [Run Build Command(s): /opt/cmake-4.2.0/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_126ac/fast]
+        ignore line: [gmake[1]: Entering directory '/extra/scylladb/latte/driver-adapters/cpp-driver/build/CMakeFiles/CMakeScratch/TryCompile-yHilEV']
+        ignore line: [/usr/bin/gmake  -f CMakeFiles/cmTC_126ac.dir/build.make CMakeFiles/cmTC_126ac.dir/build]
+        ignore line: [gmake[2]: Entering directory '/extra/scylladb/latte/driver-adapters/cpp-driver/build/CMakeFiles/CMakeScratch/TryCompile-yHilEV']
+        ignore line: [Building CXX object CMakeFiles/cmTC_126ac.dir/CMakeCXXCompilerABI.cpp.o]
+        ignore line: [/usr/bin/c++   -v -o CMakeFiles/cmTC_126ac.dir/CMakeCXXCompilerABI.cpp.o -c /opt/cmake-4.2.0/share/cmake-4.2/Modules/CMakeCXXCompilerABI.cpp]
+        ignore line: [Using built-in specs.]
+        ignore line: [COLLECT_GCC=/usr/bin/c++]
+        ignore line: [OFFLOAD_TARGET_NAMES=nvptx-none:amdgcn-amdhsa]
+        ignore line: [OFFLOAD_TARGET_DEFAULT=1]
+        ignore line: [Target: x86_64-linux-gnu]
+        ignore line: [Configured with: ../src/configure -v --with-pkgversion='Ubuntu 11.4.0-1ubuntu1~22.04.2' --with-bugurl=file:///usr/share/doc/gcc-11/README.Bugs --enable-languages=c ada c++ go brig d fortran objc obj-c++ m2 --prefix=/usr --with-gcc-major-version-only --program-suffix=-11 --program-prefix=x86_64-linux-gnu- --enable-shared --enable-linker-build-id --libexecdir=/usr/lib --without-included-gettext --enable-threads=posix --libdir=/usr/lib --enable-nls --enable-bootstrap --enable-clocale=gnu --enable-libstdcxx-debug --enable-libstdcxx-time=yes --with-default-libstdcxx-abi=new --enable-gnu-unique-object --disable-vtable-verify --enable-plugin --enable-default-pie --with-system-zlib --enable-libphobos-checking=release --with-target-system-zlib=auto --enable-objc-gc=auto --enable-multiarch --disable-werror --enable-cet --with-arch-32=i686 --with-abi=m64 --with-multilib-list=m32 m64 mx32 --enable-multilib --with-tune=generic --enable-offload-targets=nvptx-none=/build/gcc-11-2Y5pKs/gcc-11-11.4.0/debian/tmp-nvptx/usr amdgcn-amdhsa=/build/gcc-11-2Y5pKs/gcc-11-11.4.0/debian/tmp-gcn/usr --without-cuda-driver --enable-checking=release --build=x86_64-linux-gnu --host=x86_64-linux-gnu --target=x86_64-linux-gnu --with-build-config=bootstrap-lto-lean --enable-link-serialization=2]
+        ignore line: [Thread model: posix]
+        ignore line: [Supported LTO compression algorithms: zlib zstd]
+        ignore line: [gcc version 11.4.0 (Ubuntu 11.4.0-1ubuntu1~22.04.2) ]
+        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_126ac.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_126ac.dir/']
+        ignore line: [ /usr/lib/gcc/x86_64-linux-gnu/11/cc1plus -quiet -v -imultiarch x86_64-linux-gnu -D_GNU_SOURCE /opt/cmake-4.2.0/share/cmake-4.2/Modules/CMakeCXXCompilerABI.cpp -quiet -dumpdir CMakeFiles/cmTC_126ac.dir/ -dumpbase CMakeCXXCompilerABI.cpp.cpp -dumpbase-ext .cpp -mtune=generic -march=x86-64 -version -fasynchronous-unwind-tables -fstack-protector-strong -Wformat -Wformat-security -fstack-clash-protection -fcf-protection -o /tmp/ccijB11b.s]
+        ignore line: [GNU C++17 (Ubuntu 11.4.0-1ubuntu1~22.04.2) version 11.4.0 (x86_64-linux-gnu)]
+        ignore line: [	compiled by GNU C version 11.4.0  GMP version 6.2.1  MPFR version 4.1.0  MPC version 1.2.1  isl version isl-0.24-GMP]
+        ignore line: []
+        ignore line: [GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072]
+        ignore line: [ignoring duplicate directory "/usr/include/x86_64-linux-gnu/c++/11"]
+        ignore line: [ignoring nonexistent directory "/usr/local/include/x86_64-linux-gnu"]
+        ignore line: [ignoring nonexistent directory "/usr/lib/gcc/x86_64-linux-gnu/11/include-fixed"]
+        ignore line: [ignoring nonexistent directory "/usr/lib/gcc/x86_64-linux-gnu/11/../../../../x86_64-linux-gnu/include"]
+        ignore line: [#include "..." search starts here:]
+        ignore line: [#include <...> search starts here:]
+        ignore line: [ /usr/include/c++/11]
+        ignore line: [ /usr/include/x86_64-linux-gnu/c++/11]
+        ignore line: [ /usr/include/c++/11/backward]
+        ignore line: [ /usr/lib/gcc/x86_64-linux-gnu/11/include]
+        ignore line: [ /usr/local/include]
+        ignore line: [ /usr/include/x86_64-linux-gnu]
+        ignore line: [ /usr/include]
+        ignore line: [End of search list.]
+        ignore line: [GNU C++17 (Ubuntu 11.4.0-1ubuntu1~22.04.2) version 11.4.0 (x86_64-linux-gnu)]
+        ignore line: [	compiled by GNU C version 11.4.0  GMP version 6.2.1  MPFR version 4.1.0  MPC version 1.2.1  isl version isl-0.24-GMP]
+        ignore line: []
+        ignore line: [GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072]
+        ignore line: [Compiler executable checksum: 6c87588fc345655b93b8c25f48f88886]
+        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_126ac.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_126ac.dir/']
+        ignore line: [ as -v --64 -o CMakeFiles/cmTC_126ac.dir/CMakeCXXCompilerABI.cpp.o /tmp/ccijB11b.s]
+        ignore line: [GNU assembler version 2.38 (x86_64-linux-gnu) using BFD version (GNU Binutils for Ubuntu) 2.38]
+        ignore line: [COMPILER_PATH=/usr/lib/gcc/x86_64-linux-gnu/11/:/usr/lib/gcc/x86_64-linux-gnu/11/:/usr/lib/gcc/x86_64-linux-gnu/:/usr/lib/gcc/x86_64-linux-gnu/11/:/usr/lib/gcc/x86_64-linux-gnu/]
+        ignore line: [LIBRARY_PATH=/usr/lib/gcc/x86_64-linux-gnu/11/:/usr/lib/gcc/x86_64-linux-gnu/11/../../../x86_64-linux-gnu/:/usr/lib/gcc/x86_64-linux-gnu/11/../../../../lib/:/lib/x86_64-linux-gnu/:/lib/../lib/:/usr/lib/x86_64-linux-gnu/:/usr/lib/../lib/:/usr/lib/gcc/x86_64-linux-gnu/11/../../../:/lib/:/usr/lib/]
+        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_126ac.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_126ac.dir/CMakeCXXCompilerABI.cpp.']
+        ignore line: [Linking CXX executable cmTC_126ac]
+        ignore line: [/opt/cmake-4.2.0/bin/cmake -E cmake_link_script CMakeFiles/cmTC_126ac.dir/link.txt --verbose=1]
+        ignore line: [Using built-in specs.]
+        ignore line: [COLLECT_GCC=/usr/bin/c++]
+        ignore line: [COLLECT_LTO_WRAPPER=/usr/lib/gcc/x86_64-linux-gnu/11/lto-wrapper]
+        ignore line: [OFFLOAD_TARGET_NAMES=nvptx-none:amdgcn-amdhsa]
+        ignore line: [OFFLOAD_TARGET_DEFAULT=1]
+        ignore line: [Target: x86_64-linux-gnu]
+        ignore line: [Configured with: ../src/configure -v --with-pkgversion='Ubuntu 11.4.0-1ubuntu1~22.04.2' --with-bugurl=file:///usr/share/doc/gcc-11/README.Bugs --enable-languages=c ada c++ go brig d fortran objc obj-c++ m2 --prefix=/usr --with-gcc-major-version-only --program-suffix=-11 --program-prefix=x86_64-linux-gnu- --enable-shared --enable-linker-build-id --libexecdir=/usr/lib --without-included-gettext --enable-threads=posix --libdir=/usr/lib --enable-nls --enable-bootstrap --enable-clocale=gnu --enable-libstdcxx-debug --enable-libstdcxx-time=yes --with-default-libstdcxx-abi=new --enable-gnu-unique-object --disable-vtable-verify --enable-plugin --enable-default-pie --with-system-zlib --enable-libphobos-checking=release --with-target-system-zlib=auto --enable-objc-gc=auto --enable-multiarch --disable-werror --enable-cet --with-arch-32=i686 --with-abi=m64 --with-multilib-list=m32 m64 mx32 --enable-multilib --with-tune=generic --enable-offload-targets=nvptx-none=/build/gcc-11-2Y5pKs/gcc-11-11.4.0/debian/tmp-nvptx/usr amdgcn-amdhsa=/build/gcc-11-2Y5pKs/gcc-11-11.4.0/debian/tmp-gcn/usr --without-cuda-driver --enable-checking=release --build=x86_64-linux-gnu --host=x86_64-linux-gnu --target=x86_64-linux-gnu --with-build-config=bootstrap-lto-lean --enable-link-serialization=2]
+        ignore line: [Thread model: posix]
+        ignore line: [Supported LTO compression algorithms: zlib zstd]
+        ignore line: [gcc version 11.4.0 (Ubuntu 11.4.0-1ubuntu1~22.04.2) ]
+        ignore line: [COMPILER_PATH=/usr/lib/gcc/x86_64-linux-gnu/11/:/usr/lib/gcc/x86_64-linux-gnu/11/:/usr/lib/gcc/x86_64-linux-gnu/:/usr/lib/gcc/x86_64-linux-gnu/11/:/usr/lib/gcc/x86_64-linux-gnu/]
+        ignore line: [LIBRARY_PATH=/usr/lib/gcc/x86_64-linux-gnu/11/:/usr/lib/gcc/x86_64-linux-gnu/11/../../../x86_64-linux-gnu/:/usr/lib/gcc/x86_64-linux-gnu/11/../../../../lib/:/lib/x86_64-linux-gnu/:/lib/../lib/:/usr/lib/x86_64-linux-gnu/:/usr/lib/../lib/:/usr/lib/gcc/x86_64-linux-gnu/11/../../../:/lib/:/usr/lib/]
+        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_126ac' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'cmTC_126ac.']
+        link line: [ /usr/lib/gcc/x86_64-linux-gnu/11/collect2 -plugin /usr/lib/gcc/x86_64-linux-gnu/11/liblto_plugin.so -plugin-opt=/usr/lib/gcc/x86_64-linux-gnu/11/lto-wrapper -plugin-opt=-fresolution=/tmp/cchrukUh.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --build-id --eh-frame-hdr -m elf_x86_64 --hash-style=gnu --as-needed -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -z now -z relro -o cmTC_126ac /usr/lib/gcc/x86_64-linux-gnu/11/../../../x86_64-linux-gnu/Scrt1.o /usr/lib/gcc/x86_64-linux-gnu/11/../../../x86_64-linux-gnu/crti.o /usr/lib/gcc/x86_64-linux-gnu/11/crtbeginS.o -L/usr/lib/gcc/x86_64-linux-gnu/11 -L/usr/lib/gcc/x86_64-linux-gnu/11/../../../x86_64-linux-gnu -L/usr/lib/gcc/x86_64-linux-gnu/11/../../../../lib -L/lib/x86_64-linux-gnu -L/lib/../lib -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-linux-gnu/11/../../.. -v CMakeFiles/cmTC_126ac.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /usr/lib/gcc/x86_64-linux-gnu/11/crtendS.o /usr/lib/gcc/x86_64-linux-gnu/11/../../../x86_64-linux-gnu/crtn.o]
+          arg [/usr/lib/gcc/x86_64-linux-gnu/11/collect2] ==> ignore
+          arg [-plugin] ==> ignore
+          arg [/usr/lib/gcc/x86_64-linux-gnu/11/liblto_plugin.so] ==> ignore
+          arg [-plugin-opt=/usr/lib/gcc/x86_64-linux-gnu/11/lto-wrapper] ==> ignore
+          arg [-plugin-opt=-fresolution=/tmp/cchrukUh.res] ==> ignore
+          arg [-plugin-opt=-pass-through=-lgcc_s] ==> ignore
+          arg [-plugin-opt=-pass-through=-lgcc] ==> ignore
+          arg [-plugin-opt=-pass-through=-lc] ==> ignore
+          arg [-plugin-opt=-pass-through=-lgcc_s] ==> ignore
+          arg [-plugin-opt=-pass-through=-lgcc] ==> ignore
+          arg [--build-id] ==> ignore
+          arg [--eh-frame-hdr] ==> ignore
+          arg [-m] ==> ignore
+          arg [elf_x86_64] ==> ignore
+          arg [--hash-style=gnu] ==> ignore
+          arg [--as-needed] ==> ignore
+          arg [-dynamic-linker] ==> ignore
+          arg [/lib64/ld-linux-x86-64.so.2] ==> ignore
+          arg [-pie] ==> ignore
+          arg [-znow] ==> ignore
+          arg [-zrelro] ==> ignore
+          arg [-o] ==> ignore
+          arg [cmTC_126ac] ==> ignore
+          arg [/usr/lib/gcc/x86_64-linux-gnu/11/../../../x86_64-linux-gnu/Scrt1.o] ==> obj [/usr/lib/gcc/x86_64-linux-gnu/11/../../../x86_64-linux-gnu/Scrt1.o]
+          arg [/usr/lib/gcc/x86_64-linux-gnu/11/../../../x86_64-linux-gnu/crti.o] ==> obj [/usr/lib/gcc/x86_64-linux-gnu/11/../../../x86_64-linux-gnu/crti.o]
+          arg [/usr/lib/gcc/x86_64-linux-gnu/11/crtbeginS.o] ==> obj [/usr/lib/gcc/x86_64-linux-gnu/11/crtbeginS.o]
+          arg [-L/usr/lib/gcc/x86_64-linux-gnu/11] ==> dir [/usr/lib/gcc/x86_64-linux-gnu/11]
+          arg [-L/usr/lib/gcc/x86_64-linux-gnu/11/../../../x86_64-linux-gnu] ==> dir [/usr/lib/gcc/x86_64-linux-gnu/11/../../../x86_64-linux-gnu]
+          arg [-L/usr/lib/gcc/x86_64-linux-gnu/11/../../../../lib] ==> dir [/usr/lib/gcc/x86_64-linux-gnu/11/../../../../lib]
+          arg [-L/lib/x86_64-linux-gnu] ==> dir [/lib/x86_64-linux-gnu]
+          arg [-L/lib/../lib] ==> dir [/lib/../lib]
+          arg [-L/usr/lib/x86_64-linux-gnu] ==> dir [/usr/lib/x86_64-linux-gnu]
+          arg [-L/usr/lib/../lib] ==> dir [/usr/lib/../lib]
+          arg [-L/usr/lib/gcc/x86_64-linux-gnu/11/../../..] ==> dir [/usr/lib/gcc/x86_64-linux-gnu/11/../../..]
+          arg [-v] ==> ignore
+          arg [CMakeFiles/cmTC_126ac.dir/CMakeCXXCompilerABI.cpp.o] ==> ignore
+          arg [-lstdc++] ==> lib [stdc++]
+          arg [-lm] ==> lib [m]
+          arg [-lgcc_s] ==> lib [gcc_s]
+          arg [-lgcc] ==> lib [gcc]
+          arg [-lc] ==> lib [c]
+          arg [-lgcc_s] ==> lib [gcc_s]
+          arg [-lgcc] ==> lib [gcc]
+          arg [/usr/lib/gcc/x86_64-linux-gnu/11/crtendS.o] ==> obj [/usr/lib/gcc/x86_64-linux-gnu/11/crtendS.o]
+          arg [/usr/lib/gcc/x86_64-linux-gnu/11/../../../x86_64-linux-gnu/crtn.o] ==> obj [/usr/lib/gcc/x86_64-linux-gnu/11/../../../x86_64-linux-gnu/crtn.o]
+        ignore line: [collect2 version 11.4.0]
+        ignore line: [/usr/bin/ld -plugin /usr/lib/gcc/x86_64-linux-gnu/11/liblto_plugin.so -plugin-opt=/usr/lib/gcc/x86_64-linux-gnu/11/lto-wrapper -plugin-opt=-fresolution=/tmp/cchrukUh.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --build-id --eh-frame-hdr -m elf_x86_64 --hash-style=gnu --as-needed -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -z now -z relro -o cmTC_126ac /usr/lib/gcc/x86_64-linux-gnu/11/../../../x86_64-linux-gnu/Scrt1.o /usr/lib/gcc/x86_64-linux-gnu/11/../../../x86_64-linux-gnu/crti.o /usr/lib/gcc/x86_64-linux-gnu/11/crtbeginS.o -L/usr/lib/gcc/x86_64-linux-gnu/11 -L/usr/lib/gcc/x86_64-linux-gnu/11/../../../x86_64-linux-gnu -L/usr/lib/gcc/x86_64-linux-gnu/11/../../../../lib -L/lib/x86_64-linux-gnu -L/lib/../lib -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-linux-gnu/11/../../.. -v CMakeFiles/cmTC_126ac.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /usr/lib/gcc/x86_64-linux-gnu/11/crtendS.o /usr/lib/gcc/x86_64-linux-gnu/11/../../../x86_64-linux-gnu/crtn.o]
+        linker tool for 'CXX': /usr/bin/ld
+        collapse obj [/usr/lib/gcc/x86_64-linux-gnu/11/../../../x86_64-linux-gnu/Scrt1.o] ==> [/usr/lib/x86_64-linux-gnu/Scrt1.o]
+        collapse obj [/usr/lib/gcc/x86_64-linux-gnu/11/../../../x86_64-linux-gnu/crti.o] ==> [/usr/lib/x86_64-linux-gnu/crti.o]
+        collapse obj [/usr/lib/gcc/x86_64-linux-gnu/11/../../../x86_64-linux-gnu/crtn.o] ==> [/usr/lib/x86_64-linux-gnu/crtn.o]
+        collapse library dir [/usr/lib/gcc/x86_64-linux-gnu/11] ==> [/usr/lib/gcc/x86_64-linux-gnu/11]
+        collapse library dir [/usr/lib/gcc/x86_64-linux-gnu/11/../../../x86_64-linux-gnu] ==> [/usr/lib/x86_64-linux-gnu]
+        collapse library dir [/usr/lib/gcc/x86_64-linux-gnu/11/../../../../lib] ==> [/usr/lib]
+        collapse library dir [/lib/x86_64-linux-gnu] ==> [/lib/x86_64-linux-gnu]
+        collapse library dir [/lib/../lib] ==> [/lib]
+        collapse library dir [/usr/lib/x86_64-linux-gnu] ==> [/usr/lib/x86_64-linux-gnu]
+        collapse library dir [/usr/lib/../lib] ==> [/usr/lib]
+        collapse library dir [/usr/lib/gcc/x86_64-linux-gnu/11/../../..] ==> [/usr/lib]
+        implicit libs: [stdc++;m;gcc_s;gcc;c;gcc_s;gcc]
+        implicit objs: [/usr/lib/x86_64-linux-gnu/Scrt1.o;/usr/lib/x86_64-linux-gnu/crti.o;/usr/lib/gcc/x86_64-linux-gnu/11/crtbeginS.o;/usr/lib/gcc/x86_64-linux-gnu/11/crtendS.o;/usr/lib/x86_64-linux-gnu/crtn.o]
+        implicit dirs: [/usr/lib/gcc/x86_64-linux-gnu/11;/usr/lib/x86_64-linux-gnu;/usr/lib;/lib/x86_64-linux-gnu;/lib]
+        implicit fwks: []
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/Internal/CMakeDetermineLinkerId.cmake:38 (message)"
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/CMakeDetermineCompilerABI.cmake:299 (cmake_determine_linker_id)"
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Running the CXX compiler's linker: "/usr/bin/ld" "-v"
+      GNU ld (GNU Binutils for Ubuntu) 2.38
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/FindPkgConfig.cmake:517 (find_program)"
+      - "CMakeLists.txt:21 (find_package)"
+    mode: "program"
+    variable: "PKG_CONFIG_EXECUTABLE"
+    description: "pkg-config executable"
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "pkg-config"
+      - "pkgconf"
+    candidate_directories:
+      - "/home/dmitry.kropachev/.dotnet/"
+      - "/home/dmitry.kropachev/.nvm/versions/node/v20.19.4/bin/"
+      - "/home/dmitry.kropachev/.sdkman/candidates/java/current/bin/"
+      - "/home/dmitry.kropachev/.zshrc.completions/bin/"
+      - "/home/dmitry.kropachev/.local/bin/"
+      - "/home/dmitry.kropachev/bin/"
+      - "/home/dmitry.kropachev/.cargo/bin/"
+      - "/usr/local/sbin/"
+      - "/usr/local/bin/"
+      - "/usr/sbin/"
+      - "/usr/bin/"
+      - "/sbin/"
+      - "/bin/"
+      - "/usr/games/"
+      - "/usr/local/games/"
+      - "/snap/bin/"
+      - "/home/dmitry.kropachev/.dotnet/tools/"
+      - "/usr/local/bin/"
+      - "/usr/local/sbin/"
+      - "/usr/local/"
+      - "/usr/bin/"
+      - "/usr/sbin/"
+      - "/usr/"
+      - "/bin/"
+      - "/sbin/"
+      - "/opt/cmake-4.2.0/bin/"
+      - "/opt/cmake-4.2.0/sbin/"
+      - "/opt/cmake-4.2.0/"
+      - "/usr/X11R6/bin/"
+      - "/usr/X11R6/sbin/"
+      - "/usr/X11R6/"
+      - "/usr/pkg/bin/"
+      - "/usr/pkg/sbin/"
+      - "/usr/pkg/"
+      - "/opt/bin/"
+      - "/opt/sbin/"
+      - "/opt/"
+    searched_directories:
+      - "/home/dmitry.kropachev/.dotnet/pkg-config"
+      - "/home/dmitry.kropachev/.dotnet/pkgconf"
+      - "/home/dmitry.kropachev/.nvm/versions/node/v20.19.4/bin/pkg-config"
+      - "/home/dmitry.kropachev/.nvm/versions/node/v20.19.4/bin/pkgconf"
+      - "/home/dmitry.kropachev/.sdkman/candidates/java/current/bin/pkg-config"
+      - "/home/dmitry.kropachev/.sdkman/candidates/java/current/bin/pkgconf"
+      - "/home/dmitry.kropachev/.zshrc.completions/bin/pkg-config"
+      - "/home/dmitry.kropachev/.zshrc.completions/bin/pkgconf"
+      - "/home/dmitry.kropachev/.local/bin/pkg-config"
+      - "/home/dmitry.kropachev/.local/bin/pkgconf"
+      - "/home/dmitry.kropachev/bin/pkg-config"
+      - "/home/dmitry.kropachev/bin/pkgconf"
+      - "/home/dmitry.kropachev/.cargo/bin/pkg-config"
+      - "/home/dmitry.kropachev/.cargo/bin/pkgconf"
+      - "/usr/local/sbin/pkg-config"
+      - "/usr/local/sbin/pkgconf"
+      - "/usr/local/bin/pkg-config"
+      - "/usr/local/bin/pkgconf"
+      - "/usr/sbin/pkg-config"
+      - "/usr/sbin/pkgconf"
+    found: "/usr/bin/pkg-config"
+    search_context:
+      ENV{PATH}:
+        - "/home/dmitry.kropachev/.dotnet"
+        - "/home/dmitry.kropachev/.nvm/versions/node/v20.19.4/bin"
+        - "/home/dmitry.kropachev/.sdkman/candidates/java/current/bin"
+        - "/home/dmitry.kropachev/.zshrc.completions/bin"
+        - "/home/dmitry.kropachev/.zshrc.completions/bin"
+        - "/home/dmitry.kropachev/.local/bin"
+        - "/home/dmitry.kropachev/bin"
+        - "/home/dmitry.kropachev/.cargo/bin"
+        - "/home/dmitry.kropachev/.local/bin"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/sbin"
+        - "/bin"
+        - "/usr/games"
+        - "/usr/local/games"
+        - "/snap/bin"
+        - "/snap/bin"
+        - "/home/dmitry.kropachev/.dotnet/tools"
+      CMAKE_INSTALL_PREFIX: "/usr/local"
+      CMAKE_SYSTEM_PREFIX_PATH:
+        - "/usr/local"
+        - "/usr"
+        - "/"
+        - "/opt/cmake-4.2.0"
+        - "/usr/local"
+        - "/usr/X11R6"
+        - "/usr/pkg"
+        - "/opt"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/FindPkgConfig.cmake:761 (find_library)"
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/FindPkgConfig.cmake:811 (_pkg_find_libs)"
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/FindPkgConfig.cmake:1149 (_pkg_recalculate)"
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/FindPkgConfig.cmake:1166 (_pkg_check_modules_internal)"
+      - "CMakeLists.txt:24 (pkg_check_modules)"
+    mode: "library"
+    variable: "pkgcfg_lib_LIBUV_uv"
+    description: "Path to a library."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "uv"
+    candidate_directories:
+      - "/usr/lib/x86_64-linux-gnu/"
+    found: "/usr/lib/x86_64-linux-gnu/libuv.so"
+    search_context:
+      ENV{PATH}:
+        - "/home/dmitry.kropachev/.dotnet"
+        - "/home/dmitry.kropachev/.nvm/versions/node/v20.19.4/bin"
+        - "/home/dmitry.kropachev/.sdkman/candidates/java/current/bin"
+        - "/home/dmitry.kropachev/.zshrc.completions/bin"
+        - "/home/dmitry.kropachev/.zshrc.completions/bin"
+        - "/home/dmitry.kropachev/.local/bin"
+        - "/home/dmitry.kropachev/bin"
+        - "/home/dmitry.kropachev/.cargo/bin"
+        - "/home/dmitry.kropachev/.local/bin"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/sbin"
+        - "/bin"
+        - "/usr/games"
+        - "/usr/local/games"
+        - "/snap/bin"
+        - "/snap/bin"
+        - "/home/dmitry.kropachev/.dotnet/tools"
+      CMAKE_INSTALL_PREFIX: "/usr/local"
+      CMAKE_SYSTEM_PREFIX_PATH:
+        - "/usr/local"
+        - "/usr"
+        - "/"
+        - "/opt/cmake-4.2.0"
+        - "/usr/local"
+        - "/usr/X11R6"
+        - "/usr/pkg"
+        - "/opt"
+      CMAKE_SYSTEM_LIBRARY_PATH:
+        - "/usr/lib/X11"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/FindPkgConfig.cmake:761 (find_library)"
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/FindPkgConfig.cmake:811 (_pkg_find_libs)"
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/FindPkgConfig.cmake:1149 (_pkg_recalculate)"
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/FindPkgConfig.cmake:1166 (_pkg_check_modules_internal)"
+      - "CMakeLists.txt:24 (pkg_check_modules)"
+    mode: "library"
+    variable: "pkgcfg_lib_LIBUV_pthread"
+    description: "Path to a library."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "pthread"
+    candidate_directories:
+      - "/usr/lib/x86_64-linux-gnu/"
+    found: "/usr/lib/x86_64-linux-gnu/libpthread.a"
+    search_context:
+      ENV{PATH}:
+        - "/home/dmitry.kropachev/.dotnet"
+        - "/home/dmitry.kropachev/.nvm/versions/node/v20.19.4/bin"
+        - "/home/dmitry.kropachev/.sdkman/candidates/java/current/bin"
+        - "/home/dmitry.kropachev/.zshrc.completions/bin"
+        - "/home/dmitry.kropachev/.zshrc.completions/bin"
+        - "/home/dmitry.kropachev/.local/bin"
+        - "/home/dmitry.kropachev/bin"
+        - "/home/dmitry.kropachev/.cargo/bin"
+        - "/home/dmitry.kropachev/.local/bin"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/sbin"
+        - "/bin"
+        - "/usr/games"
+        - "/usr/local/games"
+        - "/snap/bin"
+        - "/snap/bin"
+        - "/home/dmitry.kropachev/.dotnet/tools"
+      CMAKE_INSTALL_PREFIX: "/usr/local"
+      CMAKE_SYSTEM_PREFIX_PATH:
+        - "/usr/local"
+        - "/usr"
+        - "/"
+        - "/opt/cmake-4.2.0"
+        - "/usr/local"
+        - "/usr/X11R6"
+        - "/usr/pkg"
+        - "/opt"
+      CMAKE_SYSTEM_LIBRARY_PATH:
+        - "/usr/lib/X11"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/FindPkgConfig.cmake:761 (find_library)"
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/FindPkgConfig.cmake:811 (_pkg_find_libs)"
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/FindPkgConfig.cmake:1149 (_pkg_recalculate)"
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/FindPkgConfig.cmake:1166 (_pkg_check_modules_internal)"
+      - "CMakeLists.txt:24 (pkg_check_modules)"
+    mode: "library"
+    variable: "pkgcfg_lib_LIBUV_dl"
+    description: "Path to a library."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "dl"
+    candidate_directories:
+      - "/usr/lib/x86_64-linux-gnu/"
+    found: "/usr/lib/x86_64-linux-gnu/libdl.a"
+    search_context:
+      ENV{PATH}:
+        - "/home/dmitry.kropachev/.dotnet"
+        - "/home/dmitry.kropachev/.nvm/versions/node/v20.19.4/bin"
+        - "/home/dmitry.kropachev/.sdkman/candidates/java/current/bin"
+        - "/home/dmitry.kropachev/.zshrc.completions/bin"
+        - "/home/dmitry.kropachev/.zshrc.completions/bin"
+        - "/home/dmitry.kropachev/.local/bin"
+        - "/home/dmitry.kropachev/bin"
+        - "/home/dmitry.kropachev/.cargo/bin"
+        - "/home/dmitry.kropachev/.local/bin"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/sbin"
+        - "/bin"
+        - "/usr/games"
+        - "/usr/local/games"
+        - "/snap/bin"
+        - "/snap/bin"
+        - "/home/dmitry.kropachev/.dotnet/tools"
+      CMAKE_INSTALL_PREFIX: "/usr/local"
+      CMAKE_SYSTEM_PREFIX_PATH:
+        - "/usr/local"
+        - "/usr"
+        - "/"
+        - "/opt/cmake-4.2.0"
+        - "/usr/local"
+        - "/usr/X11R6"
+        - "/usr/pkg"
+        - "/opt"
+      CMAKE_SYSTEM_LIBRARY_PATH:
+        - "/usr/lib/X11"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/FindPkgConfig.cmake:761 (find_library)"
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/FindPkgConfig.cmake:811 (_pkg_find_libs)"
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/FindPkgConfig.cmake:1149 (_pkg_recalculate)"
+      - "/opt/cmake-4.2.0/share/cmake-4.2/Modules/FindPkgConfig.cmake:1166 (_pkg_check_modules_internal)"
+      - "CMakeLists.txt:24 (pkg_check_modules)"
+    mode: "library"
+    variable: "pkgcfg_lib_LIBUV_rt"
+    description: "Path to a library."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "rt"
+    candidate_directories:
+      - "/usr/lib/x86_64-linux-gnu/"
+    found: "/usr/lib/x86_64-linux-gnu/librt.a"
+    search_context:
+      ENV{PATH}:
+        - "/home/dmitry.kropachev/.dotnet"
+        - "/home/dmitry.kropachev/.nvm/versions/node/v20.19.4/bin"
+        - "/home/dmitry.kropachev/.sdkman/candidates/java/current/bin"
+        - "/home/dmitry.kropachev/.zshrc.completions/bin"
+        - "/home/dmitry.kropachev/.zshrc.completions/bin"
+        - "/home/dmitry.kropachev/.local/bin"
+        - "/home/dmitry.kropachev/bin"
+        - "/home/dmitry.kropachev/.cargo/bin"
+        - "/home/dmitry.kropachev/.local/bin"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/sbin"
+        - "/bin"
+        - "/usr/games"
+        - "/usr/local/games"
+        - "/snap/bin"
+        - "/snap/bin"
+        - "/home/dmitry.kropachev/.dotnet/tools"
+      CMAKE_INSTALL_PREFIX: "/usr/local"
+      CMAKE_SYSTEM_PREFIX_PATH:
+        - "/usr/local"
+        - "/usr"
+        - "/"
+        - "/opt/cmake-4.2.0"
+        - "/usr/local"
+        - "/usr/X11R6"
+        - "/usr/pkg"
+        - "/opt"
+      CMAKE_SYSTEM_LIBRARY_PATH:
+        - "/usr/lib/X11"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "CMakeLists.txt:31 (find_library)"
+    mode: "library"
+    variable: "CASSANDRA_DRIVER_LIB"
+    description: "Path to a library."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "cassandra"
+      - "cassandra_static"
+      - "scylla-cpp-driver"
+    candidate_directories:
+      - "/home/dmitry.kropachev/.dotnet/"
+      - "/home/dmitry.kropachev/.nvm/versions/node/v20.19.4/bin/"
+      - "/home/dmitry.kropachev/.sdkman/candidates/java/current/bin/"
+      - "/home/dmitry.kropachev/.zshrc.completions/bin/"
+      - "/home/dmitry.kropachev/.local/bin/"
+      - "/home/dmitry.kropachev/bin/"
+      - "/home/dmitry.kropachev/.cargo/bin/"
+      - "/usr/local/sbin/"
+      - "/usr/local/bin/"
+      - "/usr/sbin/"
+      - "/usr/bin/"
+      - "/sbin/"
+      - "/bin/"
+      - "/usr/games/"
+      - "/usr/local/games/"
+      - "/snap/bin/"
+      - "/home/dmitry.kropachev/.dotnet/tools/"
+      - "/usr/local/lib/x86_64-linux-gnu/"
+      - "/usr/local/lib/"
+      - "/usr/local/"
+      - "/usr/lib/x86_64-linux-gnu/"
+      - "/usr/lib/"
+      - "/usr/"
+      - "/lib/x86_64-linux-gnu/"
+      - "/lib/"
+      - "/opt/cmake-4.2.0/lib/x86_64-linux-gnu/"
+      - "/opt/cmake-4.2.0/lib/"
+      - "/opt/cmake-4.2.0/"
+      - "/usr/X11R6/lib/x86_64-linux-gnu/"
+      - "/usr/X11R6/lib/"
+      - "/usr/X11R6/"
+      - "/usr/pkg/lib/x86_64-linux-gnu/"
+      - "/usr/pkg/lib/"
+      - "/usr/pkg/"
+      - "/opt/lib/x86_64-linux-gnu/"
+      - "/opt/lib/"
+      - "/opt/"
+      - "/usr/lib/X11/"
+      - "/usr/local/lib/"
+      - "/usr/lib/"
+      - "/usr/local/lib64/"
+      - "/usr/lib64/"
+      - "/usr/lib/x86_64-linux-gnu/jni/"
+    searched_directories:
+      - "/home/dmitry.kropachev/.dotnet/"
+      - "/home/dmitry.kropachev/.nvm/versions/node/v20.19.4/bin/"
+      - "/home/dmitry.kropachev/.sdkman/candidates/java/current/bin/"
+      - "/home/dmitry.kropachev/.zshrc.completions/bin/"
+      - "/home/dmitry.kropachev/.local/bin/"
+      - "/home/dmitry.kropachev/bin/"
+      - "/home/dmitry.kropachev/.cargo/bin/"
+      - "/usr/local/sbin/"
+      - "/usr/local/bin/"
+      - "/usr/sbin/"
+      - "/usr/bin/"
+      - "/sbin/"
+      - "/bin/"
+      - "/usr/games/"
+      - "/usr/local/games/"
+      - "/snap/bin/"
+      - "/home/dmitry.kropachev/.dotnet/tools/"
+      - "/usr/local/lib/x86_64-linux-gnu/"
+      - "/usr/local/lib/"
+      - "/usr/local/"
+      - "/usr/lib/x86_64-linux-gnu/"
+      - "/usr/lib/"
+      - "/usr/"
+      - "/lib/x86_64-linux-gnu/"
+      - "/lib/"
+      - "/opt/cmake-4.2.0/lib/x86_64-linux-gnu/"
+      - "/opt/cmake-4.2.0/lib/"
+      - "/opt/cmake-4.2.0/"
+      - "/usr/X11R6/lib/x86_64-linux-gnu/"
+      - "/usr/X11R6/lib/"
+      - "/usr/X11R6/"
+      - "/usr/pkg/lib/x86_64-linux-gnu/"
+      - "/usr/pkg/lib/"
+      - "/usr/pkg/"
+      - "/opt/lib/x86_64-linux-gnu/"
+      - "/opt/lib/"
+      - "/opt/"
+      - "/usr/lib/X11/"
+      - "/usr/local/lib/"
+      - "/usr/lib/"
+      - "/usr/local/lib64/"
+      - "/usr/lib64/"
+      - "/usr/lib/x86_64-linux-gnu/jni/"
+      - "/home/dmitry.kropachev/.dotnet/"
+      - "/home/dmitry.kropachev/.nvm/versions/node/v20.19.4/bin/"
+      - "/home/dmitry.kropachev/.sdkman/candidates/java/current/bin/"
+      - "/home/dmitry.kropachev/.zshrc.completions/bin/"
+      - "/home/dmitry.kropachev/.local/bin/"
+      - "/home/dmitry.kropachev/bin/"
+      - "/home/dmitry.kropachev/.cargo/bin/"
+      - "/usr/local/sbin/"
+      - "/usr/local/bin/"
+      - "/usr/sbin/"
+      - "/usr/bin/"
+      - "/sbin/"
+      - "/bin/"
+      - "/usr/games/"
+      - "/usr/local/games/"
+      - "/snap/bin/"
+      - "/home/dmitry.kropachev/.dotnet/tools/"
+      - "/usr/local/lib/x86_64-linux-gnu/"
+      - "/usr/local/lib/"
+      - "/usr/local/"
+      - "/usr/lib/x86_64-linux-gnu/"
+      - "/usr/lib/"
+      - "/usr/"
+      - "/lib/x86_64-linux-gnu/"
+      - "/lib/"
+      - "/opt/cmake-4.2.0/lib/x86_64-linux-gnu/"
+      - "/opt/cmake-4.2.0/lib/"
+      - "/opt/cmake-4.2.0/"
+      - "/usr/X11R6/lib/x86_64-linux-gnu/"
+      - "/usr/X11R6/lib/"
+      - "/usr/X11R6/"
+      - "/usr/pkg/lib/x86_64-linux-gnu/"
+      - "/usr/pkg/lib/"
+      - "/usr/pkg/"
+      - "/opt/lib/x86_64-linux-gnu/"
+      - "/opt/lib/"
+      - "/opt/"
+      - "/usr/lib/X11/"
+      - "/usr/local/lib/"
+      - "/usr/lib/"
+      - "/usr/local/lib64/"
+      - "/usr/lib64/"
+      - "/usr/lib/x86_64-linux-gnu/jni/"
+      - "/home/dmitry.kropachev/.dotnet/"
+      - "/home/dmitry.kropachev/.nvm/versions/node/v20.19.4/bin/"
+      - "/home/dmitry.kropachev/.sdkman/candidates/java/current/bin/"
+      - "/home/dmitry.kropachev/.zshrc.completions/bin/"
+      - "/home/dmitry.kropachev/.local/bin/"
+      - "/home/dmitry.kropachev/bin/"
+      - "/home/dmitry.kropachev/.cargo/bin/"
+      - "/usr/local/sbin/"
+      - "/usr/local/bin/"
+      - "/usr/sbin/"
+      - "/usr/bin/"
+      - "/sbin/"
+      - "/bin/"
+      - "/usr/games/"
+      - "/usr/local/games/"
+      - "/snap/bin/"
+      - "/home/dmitry.kropachev/.dotnet/tools/"
+      - "/usr/local/lib/x86_64-linux-gnu/"
+    found: "/usr/local/lib/libscylla-cpp-driver.so"
+    search_context:
+      ENV{PATH}:
+        - "/home/dmitry.kropachev/.dotnet"
+        - "/home/dmitry.kropachev/.nvm/versions/node/v20.19.4/bin"
+        - "/home/dmitry.kropachev/.sdkman/candidates/java/current/bin"
+        - "/home/dmitry.kropachev/.zshrc.completions/bin"
+        - "/home/dmitry.kropachev/.zshrc.completions/bin"
+        - "/home/dmitry.kropachev/.local/bin"
+        - "/home/dmitry.kropachev/bin"
+        - "/home/dmitry.kropachev/.cargo/bin"
+        - "/home/dmitry.kropachev/.local/bin"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/sbin"
+        - "/bin"
+        - "/usr/games"
+        - "/usr/local/games"
+        - "/snap/bin"
+        - "/snap/bin"
+        - "/home/dmitry.kropachev/.dotnet/tools"
+      CMAKE_INSTALL_PREFIX: "/usr/local"
+      CMAKE_SYSTEM_PREFIX_PATH:
+        - "/usr/local"
+        - "/usr"
+        - "/"
+        - "/opt/cmake-4.2.0"
+        - "/usr/local"
+        - "/usr/X11R6"
+        - "/usr/pkg"
+        - "/opt"
+      CMAKE_SYSTEM_LIBRARY_PATH:
+        - "/usr/lib/X11"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "CMakeLists.txt:36 (find_path)"
+    mode: "path"
+    variable: "CASSANDRA_DRIVER_INCLUDE"
+    description: "Path to a file."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "cassandra.h"
+    candidate_directories:
+      - "/home/dmitry.kropachev/.dotnet/cassandra/"
+      - "/home/dmitry.kropachev/.dotnet/"
+      - "/home/dmitry.kropachev/.nvm/versions/node/v20.19.4/bin/cassandra/"
+      - "/home/dmitry.kropachev/.nvm/versions/node/v20.19.4/bin/"
+      - "/home/dmitry.kropachev/.sdkman/candidates/java/current/bin/cassandra/"
+      - "/home/dmitry.kropachev/.sdkman/candidates/java/current/bin/"
+      - "/home/dmitry.kropachev/.zshrc.completions/bin/cassandra/"
+      - "/home/dmitry.kropachev/.zshrc.completions/bin/"
+      - "/home/dmitry.kropachev/.local/bin/cassandra/"
+      - "/home/dmitry.kropachev/.local/bin/"
+      - "/home/dmitry.kropachev/bin/cassandra/"
+      - "/home/dmitry.kropachev/bin/"
+      - "/home/dmitry.kropachev/.cargo/bin/cassandra/"
+      - "/home/dmitry.kropachev/.cargo/bin/"
+      - "/usr/local/sbin/cassandra/"
+      - "/usr/local/sbin/"
+      - "/usr/local/bin/cassandra/"
+      - "/usr/local/bin/"
+      - "/usr/sbin/cassandra/"
+      - "/usr/sbin/"
+      - "/usr/bin/cassandra/"
+      - "/usr/bin/"
+      - "/sbin/cassandra/"
+      - "/sbin/"
+      - "/bin/cassandra/"
+      - "/bin/"
+      - "/usr/games/cassandra/"
+      - "/usr/games/"
+      - "/usr/local/games/cassandra/"
+      - "/usr/local/games/"
+      - "/snap/bin/cassandra/"
+      - "/snap/bin/"
+      - "/home/dmitry.kropachev/.dotnet/tools/cassandra/"
+      - "/home/dmitry.kropachev/.dotnet/tools/"
+      - "/usr/local/include/x86_64-linux-gnu/cassandra/"
+      - "/usr/local/include/x86_64-linux-gnu/"
+      - "/usr/local/include/cassandra/"
+      - "/usr/local/include/"
+      - "/usr/local/cassandra/"
+      - "/usr/local/"
+      - "/usr/include/x86_64-linux-gnu/cassandra/"
+      - "/usr/include/x86_64-linux-gnu/"
+      - "/usr/include/cassandra/"
+      - "/usr/include/"
+      - "/usr/cassandra/"
+      - "/usr/"
+      - "/include/x86_64-linux-gnu/cassandra/"
+      - "/include/x86_64-linux-gnu/"
+      - "/include/cassandra/"
+      - "/include/"
+      - "/opt/cmake-4.2.0/include/x86_64-linux-gnu/cassandra/"
+      - "/opt/cmake-4.2.0/include/x86_64-linux-gnu/"
+      - "/opt/cmake-4.2.0/include/cassandra/"
+      - "/opt/cmake-4.2.0/include/"
+      - "/opt/cmake-4.2.0/cassandra/"
+      - "/opt/cmake-4.2.0/"
+      - "/usr/X11R6/include/x86_64-linux-gnu/cassandra/"
+      - "/usr/X11R6/include/x86_64-linux-gnu/"
+      - "/usr/X11R6/include/cassandra/"
+      - "/usr/X11R6/include/"
+      - "/usr/X11R6/cassandra/"
+      - "/usr/X11R6/"
+      - "/usr/pkg/include/x86_64-linux-gnu/cassandra/"
+      - "/usr/pkg/include/x86_64-linux-gnu/"
+      - "/usr/pkg/include/cassandra/"
+      - "/usr/pkg/include/"
+      - "/usr/pkg/cassandra/"
+      - "/usr/pkg/"
+      - "/opt/include/x86_64-linux-gnu/cassandra/"
+      - "/opt/include/x86_64-linux-gnu/"
+      - "/opt/include/cassandra/"
+      - "/opt/include/"
+      - "/opt/cassandra/"
+      - "/opt/"
+      - "/usr/include/X11/cassandra/"
+      - "/usr/include/X11/"
+      - "/usr/local/include/cassandra/"
+      - "/usr/local/include/"
+      - "/usr/include/cassandra/"
+      - "/usr/include/"
+    searched_directories:
+      - "/home/dmitry.kropachev/.dotnet/cassandra/cassandra.h"
+      - "/home/dmitry.kropachev/.dotnet/cassandra.h"
+      - "/home/dmitry.kropachev/.nvm/versions/node/v20.19.4/bin/cassandra/cassandra.h"
+      - "/home/dmitry.kropachev/.nvm/versions/node/v20.19.4/bin/cassandra.h"
+      - "/home/dmitry.kropachev/.sdkman/candidates/java/current/bin/cassandra/cassandra.h"
+      - "/home/dmitry.kropachev/.sdkman/candidates/java/current/bin/cassandra.h"
+      - "/home/dmitry.kropachev/.zshrc.completions/bin/cassandra/cassandra.h"
+      - "/home/dmitry.kropachev/.zshrc.completions/bin/cassandra.h"
+      - "/home/dmitry.kropachev/.local/bin/cassandra/cassandra.h"
+      - "/home/dmitry.kropachev/.local/bin/cassandra.h"
+      - "/home/dmitry.kropachev/bin/cassandra/cassandra.h"
+      - "/home/dmitry.kropachev/bin/cassandra.h"
+      - "/home/dmitry.kropachev/.cargo/bin/cassandra/cassandra.h"
+      - "/home/dmitry.kropachev/.cargo/bin/cassandra.h"
+      - "/usr/local/sbin/cassandra/cassandra.h"
+      - "/usr/local/sbin/cassandra.h"
+      - "/usr/local/bin/cassandra/cassandra.h"
+      - "/usr/local/bin/cassandra.h"
+      - "/usr/sbin/cassandra/cassandra.h"
+      - "/usr/sbin/cassandra.h"
+      - "/usr/bin/cassandra/cassandra.h"
+      - "/usr/bin/cassandra.h"
+      - "/sbin/cassandra/cassandra.h"
+      - "/sbin/cassandra.h"
+      - "/bin/cassandra/cassandra.h"
+      - "/bin/cassandra.h"
+      - "/usr/games/cassandra/cassandra.h"
+      - "/usr/games/cassandra.h"
+      - "/usr/local/games/cassandra/cassandra.h"
+      - "/usr/local/games/cassandra.h"
+      - "/snap/bin/cassandra/cassandra.h"
+      - "/snap/bin/cassandra.h"
+      - "/home/dmitry.kropachev/.dotnet/tools/cassandra/cassandra.h"
+      - "/home/dmitry.kropachev/.dotnet/tools/cassandra.h"
+      - "/usr/local/include/x86_64-linux-gnu/cassandra/cassandra.h"
+      - "/usr/local/include/x86_64-linux-gnu/cassandra.h"
+    found: "/usr/local/include/cassandra/"
+    search_context:
+      ENV{PATH}:
+        - "/home/dmitry.kropachev/.dotnet"
+        - "/home/dmitry.kropachev/.nvm/versions/node/v20.19.4/bin"
+        - "/home/dmitry.kropachev/.sdkman/candidates/java/current/bin"
+        - "/home/dmitry.kropachev/.zshrc.completions/bin"
+        - "/home/dmitry.kropachev/.zshrc.completions/bin"
+        - "/home/dmitry.kropachev/.local/bin"
+        - "/home/dmitry.kropachev/bin"
+        - "/home/dmitry.kropachev/.cargo/bin"
+        - "/home/dmitry.kropachev/.local/bin"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/sbin"
+        - "/bin"
+        - "/usr/games"
+        - "/usr/local/games"
+        - "/snap/bin"
+        - "/snap/bin"
+        - "/home/dmitry.kropachev/.dotnet/tools"
+      CMAKE_INSTALL_PREFIX: "/usr/local"
+      CMAKE_SYSTEM_PREFIX_PATH:
+        - "/usr/local"
+        - "/usr"
+        - "/"
+        - "/opt/cmake-4.2.0"
+        - "/usr/local"
+        - "/usr/X11R6"
+        - "/usr/pkg"
+        - "/opt"
+      CMAKE_SYSTEM_INCLUDE_PATH:
+        - "/usr/include/X11"
+...

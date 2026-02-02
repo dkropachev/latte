@@ -1,0 +1,13 @@
+# Binary
+latte-gocql-driver
+
+# PGO profiles (temporary)
+cpu.pprof
+merged.pgo
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store

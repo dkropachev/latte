@@ -1,0 +1,298 @@
+//! Primitive CQL data types integration test workload.
+//!
+//! Tests primitive CQL types: numeric, boolean, text/binary, temporal, UUID, and network types.
+//!
+//! NOTE: The `timestamp` type is intentionally excluded from this workload.
+//! The Python driver cannot decode timestamp values outside Python's datetime range,
+//! and latte::hash() generates arbitrary 64-bit values that exceed this range.
+//! Use the `time` type (nanoseconds since midnight) for temporal benchmarks instead.
+//!
+//! USAGE:
+//!   latte schema --driver /tmp/driver.sock driver-adapters/workloads/primitives.rn
+//!   latte load --driver /tmp/driver.sock -P row_count=1000 driver-adapters/workloads/primitives.rn
+//!   latte run --driver /tmp/driver.sock -d 10s -r 100 -P row_count=1000 -f validate driver-adapters/workloads/primitives.rn
+
+use latte::*;
+
+// ============================================================================
+// Configuration
+// ============================================================================
+
+const KEYSPACE = latte::param!("keyspace", "latte_primitives");
+const TABLE = latte::param!("table", "primitives");
+const ROW_COUNT = latte::param!("row_count", 10000);
+const REPLICATION_FACTOR = latte::param!("replication_factor", 1);
+
+const INSERT = "insert";
+const SELECT_BY_PK_CK = "select_by_pk_ck";
+
+// ============================================================================
+// Schema
+// ============================================================================
+
+pub async fn schema(ctx) {
+    ctx.execute(`
+        CREATE KEYSPACE IF NOT EXISTS ${KEYSPACE}
+        WITH replication = {
+            'class': 'SimpleStrategy',
+            'replication_factor': ${REPLICATION_FACTOR}
+        }
+    `).await?;
+
+    ctx.execute(`DROP TABLE IF EXISTS ${KEYSPACE}.${TABLE}`).await?;
+
+    ctx.execute(`
+        CREATE TABLE ${KEYSPACE}.${TABLE} (
+            pk bigint,
+            ck bigint,
+
+            -- Numeric types
+            col_tinyint tinyint,
+            col_smallint smallint,
+            col_int int,
+            col_bigint bigint,
+            col_float float,
+            col_double double,
+            col_varint varint,
+            col_decimal decimal,
+
+            -- Boolean
+            col_boolean boolean,
+
+            -- Text/binary types
+            col_ascii ascii,
+            col_text text,
+            col_varchar varchar,
+            col_blob blob,
+
+            -- Temporal types (timestamp excluded - see file header)
+            col_date date,
+            col_time time,
+            col_duration duration,
+
+            -- UUID types
+            col_uuid uuid,
+            col_timeuuid timeuuid,
+
+            -- Network type
+            col_inet inet,
+
+            PRIMARY KEY (pk, ck)
+        )
+    `).await?;
+}
+
+pub async fn erase(ctx) {
+    ctx.execute(`TRUNCATE TABLE ${KEYSPACE}.${TABLE}`).await?
+}
+
+// ============================================================================
+// Prepare
+// ============================================================================
+
+pub async fn prepare(ctx) {
+    ctx.load_cycle_count = ROW_COUNT;
+
+    ctx.prepare(INSERT, `
+        INSERT INTO ${KEYSPACE}.${TABLE} (
+            pk, ck,
+            col_tinyint, col_smallint, col_int, col_bigint, col_float, col_double, col_varint, col_decimal,
+            col_boolean,
+            col_ascii, col_text, col_varchar, col_blob,
+            col_date, col_time, col_duration,
+            col_uuid, col_timeuuid,
+            col_inet
+        ) VALUES (
+            :pk, :ck,
+            :col_tinyint, :col_smallint, :col_int, :col_bigint, :col_float, :col_double, :col_varint, :col_decimal,
+            :col_boolean,
+            :col_ascii, :col_text, :col_varchar, :col_blob,
+            :col_date, :col_time, :col_duration,
+            :col_uuid, :col_timeuuid,
+            :col_inet
+        )
+    `).await?;
+
+    ctx.prepare(SELECT_BY_PK_CK, `
+        SELECT * FROM ${KEYSPACE}.${TABLE} WHERE pk = :pk AND ck = :ck
+    `).await?;
+}
+
+// ============================================================================
+// Data Generation
+// ============================================================================
+
+fn generate_row_data(i) {
+    let idx = i % ROW_COUNT;
+    let pk = latte::hash(idx / 10);
+    let ck = latte::hash(idx);
+    let mult = if idx % 2 == 0 { -1 } else { 1 };
+
+    // Numeric types
+    let col_tinyint = if idx % 17 == 0 { None } else { (latte::hash_range(idx, 127) * mult) };
+    let col_smallint = if idx % 19 == 0 { None } else { (latte::hash_range(idx, 32767) * mult) };
+    let col_int = if idx % 23 == 0 { None } else { (latte::hash_range(idx, 2147483647) * mult) };
+    let col_bigint = if idx % 29 == 0 { None } else { (latte::hash(idx) * mult) };
+    let col_float = if idx % 11 == 0 { None } else { latte::normal_f32(idx, 0.0, 1000.0) };
+    let col_double = if idx % 13 == 0 { None } else { latte::normal(idx, 0.0, 1000000.0) };
+    let col_varint = if idx % 31 == 0 { None } else { (latte::hash(idx + 100) * mult) };
+    let col_decimal = if idx % 37 == 0 { None } else { `${latte::hash_range(idx, 999999)}.${latte::hash_range(idx + 1, 99)}` };
+
+    // Boolean
+    let col_boolean = if idx % 3 == 0 { None } else { idx % 2 == 0 };
+
+    // Text/binary types
+    let col_ascii = if idx % 14 == 0 { None } else { latte::text(idx, latte::hash_range(idx, 64) + 1) };
+    let col_text = if idx % 15 == 0 { None } else { latte::text(idx + 100, latte::hash_range(idx, 128) + 1) };
+    let col_varchar = if idx % 16 == 0 { None } else { latte::text(idx + 200, latte::hash_range(idx, 64) + 1) };
+    let col_blob = if idx % 18 == 0 { None } else { latte::blob(idx, latte::hash_range(idx, 256) + 1) };
+
+    // Temporal types (timestamp excluded - see file header)
+    // Use valid dates (day 1-28 works for all months)
+    let year = 2000 + (idx % 24);
+    let month = (idx % 12) + 1;
+    let day = (idx % 28) + 1;
+    let month_str = if month < 10 { `0${month}` } else { `${month}` };
+    let day_str = if day < 10 { `0${day}` } else { `${day}` };
+    let col_date = if idx % 20 == 0 { None } else { `${year}-${month_str}-${day_str}` };
+    let col_time = if idx % 21 == 0 { None } else { `${(idx % 24)}:${idx % 60}:${idx % 60}` };
+    let col_duration = if idx % 24 == 0 { None } else { `${idx % 12}mo${idx % 30}d${idx % 24}h${idx % 60}m${idx % 60}s` };
+
+    // UUID types
+    let col_uuid = if idx % 25 == 0 { None } else { latte::uuid(idx) };
+    let col_timeuuid = if idx % 26 == 0 { None } else { `474ecf7${idx % 10}-4fea-11ef-${idx % 10}eba-0${idx % 10}1023456789` };
+
+    // Network type
+    let col_inet = if idx % 27 == 0 { None } else {
+        `${latte::hash_range(idx, 255)}.${latte::hash_range(idx + 1, 255)}.${latte::hash_range(idx + 2, 255)}.${latte::hash_range(idx + 3, 255)}`
+    };
+
+    #{
+        "pk": pk,
+        "ck": ck,
+        "col_tinyint": col_tinyint,
+        "col_smallint": col_smallint,
+        "col_int": col_int,
+        "col_bigint": col_bigint,
+        "col_float": col_float,
+        "col_double": col_double,
+        "col_varint": col_varint,
+        "col_decimal": col_decimal,
+        "col_boolean": col_boolean,
+        "col_ascii": col_ascii,
+        "col_text": col_text,
+        "col_varchar": col_varchar,
+        "col_blob": col_blob,
+        "col_date": col_date,
+        "col_time": col_time,
+        "col_duration": col_duration,
+        "col_uuid": col_uuid,
+        "col_timeuuid": col_timeuuid,
+        "col_inet": col_inet,
+    }
+}
+
+// ============================================================================
+// Load
+// ============================================================================
+
+pub async fn load(ctx, i) {
+    let d = generate_row_data(i);
+
+    ctx.execute_prepared(INSERT, [
+        d.pk, d.ck,
+        d.col_tinyint, d.col_smallint, d.col_int, d.col_bigint, d.col_float, d.col_double, d.col_varint, d.col_decimal,
+        d.col_boolean,
+        d.col_ascii, d.col_text, d.col_varchar, d.col_blob,
+        d.col_date, d.col_time, d.col_duration,
+        d.col_uuid, d.col_timeuuid,
+        d.col_inet,
+    ]).await?
+}
+
+// ============================================================================
+// Run
+// ============================================================================
+
+pub async fn run(ctx, i) {
+    let d = generate_row_data(i);
+    ctx.execute_prepared(SELECT_BY_PK_CK, [d.pk, d.ck]).await?
+}
+
+pub async fn validate(ctx, i) {
+    let d = generate_row_data(i);
+    let rows = ctx.execute_prepared_with_result(SELECT_BY_PK_CK, [d.pk, d.ck]).await?;
+
+    if rows.len() != 1 {
+        ctx.signal_failure(`Expected 1 row for pk=${d.pk}, ck=${d.ck}, got ${rows.len()}`).await?;
+        return Ok(());
+    }
+
+    let row = rows.0;
+
+    // Validate keys
+    if row.get("pk")? != d.pk {
+        ctx.signal_failure(`pk mismatch: expected ${d.pk}, got ${row.get("pk")?}`).await?;
+    }
+    if row.get("ck")? != d.ck {
+        ctx.signal_failure(`ck mismatch: expected ${d.ck}, got ${row.get("ck")?}`).await?;
+    }
+
+    // Validate numeric types
+    validate_column(ctx, row, d, "col_tinyint").await?;
+    validate_column(ctx, row, d, "col_smallint").await?;
+    validate_column(ctx, row, d, "col_int").await?;
+    validate_column(ctx, row, d, "col_bigint").await?;
+    validate_column(ctx, row, d, "col_float").await?;
+    validate_column(ctx, row, d, "col_double").await?;
+    validate_column(ctx, row, d, "col_varint").await?;
+    validate_column_as_string(ctx, row, d, "col_decimal").await?;
+
+    // Validate boolean
+    validate_column(ctx, row, d, "col_boolean").await?;
+
+    // Validate text/binary
+    validate_column(ctx, row, d, "col_ascii").await?;
+    validate_column(ctx, row, d, "col_text").await?;
+    validate_column(ctx, row, d, "col_varchar").await?;
+    validate_column(ctx, row, d, "col_blob").await?;
+
+    // Validate UUID
+    validate_column_as_string(ctx, row, d, "col_uuid").await?;
+
+    // Validate inet
+    validate_column(ctx, row, d, "col_inet").await?;
+
+    Ok(())
+}
+
+async fn validate_column(ctx, row, expected, col_name) {
+    let actual = row.get(col_name)?;
+    let exp = expected.get(col_name)?;
+
+    if is_none(exp) {
+        if !is_none(actual) {
+            ctx.signal_failure(`${col_name}: expected None, got ${actual}`).await?;
+        }
+    } else if actual != exp {
+        ctx.signal_failure(`${col_name} mismatch: expected ${exp}, got ${actual}`).await?;
+    }
+    Ok(())
+}
+
+async fn validate_column_as_string(ctx, row, expected, col_name) {
+    let actual = row.get(col_name)?;
+    let exp = expected.get(col_name)?;
+
+    if is_none(exp) {
+        if !is_none(actual) {
+            ctx.signal_failure(`${col_name}: expected None, got ${actual}`).await?;
+        }
+    } else {
+        let exp_str = `${exp}`;
+        if actual != exp_str {
+            ctx.signal_failure(`${col_name} mismatch: expected ${exp_str}, got ${actual}`).await?;
+        }
+    }
+    Ok(())
+}

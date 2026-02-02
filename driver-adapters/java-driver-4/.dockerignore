@@ -1,0 +1,19 @@
+# Build artifacts
+target/
+
+# Documentation
+README.md
+TODO.md
+*.md
+
+# Build files
+Makefile
+
+# Git
+.git
+.gitignore
+
+# IDE
+.idea/
+.vscode/
+*.iml
