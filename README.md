@@ -76,6 +76,107 @@ Latte is still early stage software under intensive development.
 * The set of data generating functions is tiny and will be extended soon.
 * Backwards compatibility may be broken frequently.
 
+## DynamoDB/Alternator Support
+
+Latte supports benchmarking DynamoDB-compatible databases including AWS DynamoDB and ScyllaDB Alternator.
+
+### Quick Start
+
+```shell
+# Run against ScyllaDB Alternator
+latte run --dynamodb --endpoint http://localhost:8000 workloads/dynamodb/basic.rn
+
+# Run against AWS DynamoDB
+latte run --dynamodb --region us-east-1 workloads/dynamodb/basic.rn
+```
+
+### DynamoDB Workload Example
+
+```rust
+const TABLE = "benchmark";
+const ROW_COUNT = latte::param!("rows", 100000);
+
+pub async fn schema(ctx) {
+    let client = ctx.client();
+
+    // Delete table if exists
+    let _ = client.delete_table(TABLE).await;
+
+    // Create table with partition key
+    client.create_table(
+        TABLE,
+        [dynamodb::dynamo_key_schema("pk", "HASH")],
+        [dynamodb::dynamo_attribute_def("pk", "S")],
+        #{billing_mode: "PAY_PER_REQUEST"}
+    ).await?;
+
+    client.wait_table_active(TABLE).await
+}
+
+pub async fn prepare(ctx) {
+    ctx.load_cycle_count = ROW_COUNT;
+}
+
+pub async fn load(ctx, i) {
+    let client = ctx.client();
+    client.put_item(TABLE, #{
+        pk: dynamodb::dynamo_s(`user#${i}`),
+        data: dynamodb::dynamo_b(latte::blob(i, 64)),
+    }).await
+}
+
+pub async fn run(ctx, i) {
+    let client = ctx.client();
+    let pk = `user#${latte::hash(i) % ROW_COUNT}`;
+    client.get_item(TABLE, #{pk: dynamodb::dynamo_s(pk)}).await
+}
+```
+
+### DynamoDB CLI Options
+
+| Option | Description |
+|--------|-------------|
+| `--dynamodb` | Enable DynamoDB mode |
+| `--endpoint URL` | DynamoDB/Alternator endpoint URL |
+| `--region REGION` | AWS region (default: us-east-1) |
+| `--aws-access-key-id KEY` | AWS access key ID |
+| `--aws-secret-access-key SECRET` | AWS secret access key |
+
+### Multi-Client Support
+
+DynamoDB workloads can create multiple clients for cross-endpoint testing:
+
+```rust
+pub async fn prepare(ctx) {
+    // Create named clients for different endpoints
+    ctx.create_client_named("alternator", #{
+        endpoint: "http://alternator:8000",
+    });
+    ctx.create_client_named("dynamodb", #{
+        region: "us-east-1",
+    });
+}
+
+pub async fn run(ctx, i) {
+    // Use different clients in the same workload
+    ctx.client_named("alternator").get_item(...).await?;
+    ctx.client_named("dynamodb").get_item(...).await
+}
+```
+
+### Alternator Compatibility
+
+ScyllaDB Alternator is largely compatible with DynamoDB but has some differences:
+
+| Feature | DynamoDB | Alternator |
+|---------|----------|------------|
+| Transactions | ✅ Supported | ❌ Not supported |
+| BatchWriteItem limit | 25 items | 100 items |
+| GSI projection | Configurable | Always ALL |
+| Scan ordering | Proprietary hash | Murmur3 (different order) |
+
+For full compatibility details, see [ALTERNATOR.md](./ALTERNATOR.md).
+
 ## Installation
 
 ### From deb package

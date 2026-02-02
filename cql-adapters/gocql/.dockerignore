@@ -1,0 +1,22 @@
+# Built binaries
+gocql
+latte-gocql-driver
+latte-gocql-driver.*
+*.exe
+
+# Documentation
+README.md
+PLAN.md
+TODO.md
+*.md
+
+# Build files
+Makefile
+
+# Git
+.git
+.gitignore
+
+# IDE
+.idea/
+.vscode/

@@ -39,6 +39,11 @@ impl LatencyDistributionRecorder {
         self.ess_estimator.clear();
     }
 
+    /// Returns the number of recorded samples.
+    pub fn count(&self) -> u64 {
+        self.histogram_ns.len()
+    }
+
     pub fn distribution(&self) -> LatencyDistribution {
         LatencyDistribution {
             mean: self.mean(1),

@@ -1,0 +1,70 @@
+// Multi-operation DynamoDB workload for Latte
+//
+// This workload demonstrates multiple read operations per cycle.
+//
+// Usage:
+//   latte schema  --dynamodb --dynamodb-endpoint http://localhost:8000 workloads/dynamodb/multi_client.rn
+//   latte load    --dynamodb --dynamodb-endpoint http://localhost:8000 workloads/dynamodb/multi_client.rn
+//   latte run     --dynamodb --dynamodb-endpoint http://localhost:8000 workloads/dynamodb/multi_client.rn
+
+const TABLE_NAME = "latte_multi_read_test";
+const ITEM_COUNT = latte::param!("items", 5000);
+
+pub async fn schema(ctx) {
+    let _ = ctx.delete_table(TABLE_NAME).await;
+
+    ctx.create_table(
+        TABLE_NAME,
+        [dynamodb::dynamo_key_schema("pk", "HASH")],
+        [dynamodb::dynamo_attribute_def("pk", "S")],
+        Some(dynamodb::dynamo_throughput(100, 100)),
+    ).await?;
+
+    ctx.wait_table_active(TABLE_NAME).await?;
+    Ok(())
+}
+
+pub async fn prepare(ctx) {
+    ctx.load_cycle_count = ITEM_COUNT;
+    Ok(())
+}
+
+pub async fn erase(ctx) {
+    schema(ctx).await?;
+    Ok(())
+}
+
+pub async fn load(ctx, i) {
+    let pk = format!("item_{:08}", i);
+    let item = #{
+        "pk": dynamodb::dynamo_s(pk),
+        "value": dynamodb::dynamo_n(i),
+        "data": dynamodb::dynamo_s(format!("Data for item {}", i)),
+    };
+    ctx.put_item(TABLE_NAME, item, None).await?;
+    Ok(())
+}
+
+pub async fn run(ctx, i) {
+    // Perform 3 read operations per cycle
+    let base_id = latte::hash_range(i, ITEM_COUNT);
+
+    // First read
+    let pk1 = format!("item_{:08}", base_id);
+    let key1 = #{ "pk": dynamodb::dynamo_s(pk1) };
+    ctx.get_item(TABLE_NAME, key1, None).await?;
+
+    // Second read
+    let item_id2 = (base_id + 1) % ITEM_COUNT;
+    let pk2 = format!("item_{:08}", item_id2);
+    let key2 = #{ "pk": dynamodb::dynamo_s(pk2) };
+    ctx.get_item(TABLE_NAME, key2, None).await?;
+
+    // Third read
+    let item_id3 = (base_id + 2) % ITEM_COUNT;
+    let pk3 = format!("item_{:08}", item_id3);
+    let key3 = #{ "pk": dynamodb::dynamo_s(pk3) };
+    ctx.get_item(TABLE_NAME, key3, None).await?;
+
+    Ok(())
+}

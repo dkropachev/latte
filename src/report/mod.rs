@@ -521,6 +521,7 @@ impl Display for RunConfigCmp<'_> {
             writeln!(f, "{l}")?;
         }
 
+        // unwrap is acceptable for writeln! to formatter - writing to in-memory formatter should not fail
         writeln!(f, "{}", fmt_horizontal_line()).unwrap();
 
         let param_names = self.param_names();
@@ -732,6 +733,16 @@ impl Display for BenchmarkCmp<'_> {
             .into_box(),
         ];
         for l in summary {
+            writeln!(f, "{l}")?;
+        }
+
+        // Only show driver latency if present (driver mode only)
+        if self.v1.driver_latency.is_some() || self.v2.is_some_and(|v| v.driver_latency.is_some()) {
+            let l = self
+                .line("Driver latency", "ms", |s| {
+                    Quantity::from(s.driver_latency.as_ref().map(|dl| dl.mean)).with_precision(3)
+                })
+                .with_orientation(-1);
             writeln!(f, "{l}")?;
         }
 

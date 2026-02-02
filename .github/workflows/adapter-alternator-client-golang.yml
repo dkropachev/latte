@@ -1,0 +1,361 @@
+name: Adapter - Alternator Client Golang
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'alternator-adapters/alternator-client-golang/**'
+      - 'alternator-adapters/Makefile'
+      - 'alternator-adapters/.scripts/**'
+      - 'workloads/dynamodb/**'
+      - '.github/workflows/adapter-alternator-client-golang.yml'
+  pull_request:
+    paths:
+      - 'alternator-adapters/alternator-client-golang/**'
+      - 'alternator-adapters/Makefile'
+      - 'alternator-adapters/.scripts/**'
+      - 'workloads/dynamodb/**'
+      - '.github/workflows/adapter-alternator-client-golang.yml'
+
+defaults:
+  run:
+    working-directory: alternator-adapters/alternator-client-golang
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: alternator-adapters/alternator-client-golang/go.mod
+          cache-dependency-path: alternator-adapters/alternator-client-golang/go.sum
+
+      - name: Install golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          working-directory: alternator-adapters/alternator-client-golang
+
+  fmt-check:
+    name: Format Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: alternator-adapters/alternator-client-golang/go.mod
+          cache-dependency-path: alternator-adapters/alternator-client-golang/go.sum
+
+      - name: Check formatting
+        run: |
+          if [ -n "$(gofmt -l .)" ]; then
+            echo "Code is not formatted. Please run 'go fmt ./...'"
+            gofmt -d .
+            exit 1
+          fi
+
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: alternator-adapters/alternator-client-golang/go.mod
+          cache-dependency-path: alternator-adapters/alternator-client-golang/go.sum
+
+      - name: Run unit tests
+        run: go test -v -race ./...
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: alternator-adapters/alternator-client-golang/go.mod
+          cache-dependency-path: alternator-adapters/alternator-client-golang/go.sum
+
+      - name: Build release
+        run: CGO_ENABLED=0 go build -ldflags="-s -w" -o latte-alternator-adapter ./cmd/adapter
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: latte-alternator-client-golang
+          path: alternator-adapters/alternator-client-golang/latte-alternator-adapter
+          retention-days: 1
+
+  integration:
+    name: Integration Tests
+    needs: build
+    runs-on: ubuntu-latest
+    services:
+      dynamodb-local:
+        image: amazon/dynamodb-local:latest
+        ports:
+          - 8000:8000
+        options: >-
+          --health-cmd "curl -s http://localhost:8000/shell/ || exit 0"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: alternator-adapters/alternator-client-golang/go.mod
+          cache-dependency-path: alternator-adapters/alternator-client-golang/go.sum
+
+      - name: Wait for DynamoDB Local
+        run: |
+          for i in {1..30}; do
+            if curl -s http://localhost:8000 > /dev/null 2>&1; then
+              echo "DynamoDB Local is ready"
+              break
+            fi
+            echo "Waiting for DynamoDB Local... ($i/30)"
+            sleep 2
+          done
+
+      - name: Run integration tests
+        run: go test -v -tags=integration ./...
+        env:
+          LATTE_TEST_ENDPOINT: http://localhost:8000
+
+  functional-tests:
+    name: Functional Tests with Latte
+    needs: build
+    runs-on: ubuntu-latest
+    services:
+      dynamodb-local:
+        image: amazon/dynamodb-local:latest
+        ports:
+          - 8000:8000
+        options: >-
+          --health-cmd "curl -s http://localhost:8000/shell/ || exit 0"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: alternator-adapters/alternator-client-golang/go.mod
+          cache-dependency-path: alternator-adapters/alternator-client-golang/go.sum
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-action@stable
+
+      - name: Cache cargo (latte)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-latte-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-latte-
+
+      - name: Build latte
+        working-directory: .
+        run: cargo build --release
+
+      - name: Download adapter artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: latte-alternator-client-golang
+          path: alternator-adapters/alternator-client-golang/bin/
+
+      - name: Make binaries executable
+        run: |
+          chmod +x ${{ github.workspace }}/target/release/latte
+          chmod +x bin/latte-alternator-adapter
+          mv bin/latte-alternator-adapter bin/adapter
+
+      - name: Wait for DynamoDB Local
+        run: |
+          for i in {1..30}; do
+            if curl -s http://localhost:8000 > /dev/null 2>&1; then
+              echo "DynamoDB Local is ready"
+              break
+            fi
+            echo "Waiting for DynamoDB Local... ($i/30)"
+            sleep 2
+          done
+
+      - name: Run Functional CRUD test
+        run: make test-functional-crud
+        env:
+          LATTE_BIN: ${{ github.workspace }}/target/release/latte
+          TEST_ENDPOINT: http://localhost:8000
+
+      - name: Run Functional Query test
+        run: make test-functional-query
+        env:
+          LATTE_BIN: ${{ github.workspace }}/target/release/latte
+          TEST_ENDPOINT: http://localhost:8000
+
+      - name: Run Functional Batch test
+        run: make test-functional-batch
+        env:
+          LATTE_BIN: ${{ github.workspace }}/target/release/latte
+          TEST_ENDPOINT: http://localhost:8000
+
+  benchmark:
+    name: Benchmark Tests
+    needs: build
+    runs-on: ubuntu-latest
+    services:
+      dynamodb-local:
+        image: amazon/dynamodb-local:latest
+        ports:
+          - 8000:8000
+        options: >-
+          --health-cmd "curl -s http://localhost:8000/shell/ || exit 0"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: alternator-adapters/alternator-client-golang/go.mod
+          cache-dependency-path: alternator-adapters/alternator-client-golang/go.sum
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-action@stable
+
+      - name: Cache cargo (latte)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-latte-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-latte-
+
+      - name: Build latte
+        working-directory: .
+        run: cargo build --release
+
+      - name: Download adapter artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: latte-alternator-client-golang
+          path: alternator-adapters/alternator-client-golang/bin/
+
+      - name: Make binaries executable
+        run: |
+          chmod +x ${{ github.workspace }}/target/release/latte
+          chmod +x bin/latte-alternator-adapter
+          mv bin/latte-alternator-adapter bin/adapter
+
+      - name: Wait for DynamoDB Local
+        run: |
+          for i in {1..30}; do
+            if curl -s http://localhost:8000 > /dev/null 2>&1; then
+              echo "DynamoDB Local is ready"
+              break
+            fi
+            echo "Waiting for DynamoDB Local... ($i/30)"
+            sleep 2
+          done
+
+      - name: Run benchmark tests
+        working-directory: alternator-adapters
+        run: |
+          make test-benchmark \
+            ADAPTERS=alternator-client-golang \
+            WORKLOADS=crud,query \
+            BENCHMARK_DURATION=5s \
+            BENCHMARK_ITEM_COUNT=1000
+        env:
+          LATTE_BIN: ${{ github.workspace }}/target/release/latte
+          ALTERNATOR_ENDPOINT: http://localhost:8000
+
+      - name: Upload benchmark reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: benchmark-reports
+          path: alternator-adapters/.benchmark-reports/
+          retention-days: 7
+
+  docker-build:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: alternator-adapters/alternator-client-golang
+          push: false
+          tags: scylladb/latte-alternator-adapters:alternator-client-golang-test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  docker-push:
+    name: Docker Push
+    needs: [lint, fmt-check, test, build, integration, functional-tests, benchmark, docker-build]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract version
+        id: version
+        run: |
+          VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "dev")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: alternator-adapters/alternator-client-golang
+          push: true
+          tags: |
+            scylladb/latte-alternator-adapters:alternator-client-golang-latest
+            scylladb/latte-alternator-adapters:alternator-client-golang-${{ steps.version.outputs.version }}
+          build-args: |
+            ADAPTER_VERSION=${{ steps.version.outputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

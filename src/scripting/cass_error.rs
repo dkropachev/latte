@@ -14,6 +14,35 @@ use std::fmt::{Display, Formatter};
 pub struct CassError(pub CassErrorKind);
 
 impl CassError {
+    /// Create a boxed generic error. Use this for error paths to avoid verbose Box::new() calls.
+    #[inline]
+    pub fn boxed_error(msg: impl Into<String>) -> Box<CassError> {
+        Box::new(CassError(CassErrorKind::Error(msg.into())))
+    }
+
+    /// Create a boxed query param conversion error.
+    #[inline]
+    pub fn boxed_param_error(
+        value: impl Into<String>,
+        typ: impl Into<String>,
+        detail: Option<String>,
+    ) -> Box<CassError> {
+        Box::new(CassError(CassErrorKind::QueryParamConversion(
+            value.into(),
+            typ.into(),
+            detail,
+        )))
+    }
+
+    /// Create a boxed value out of range error.
+    #[inline]
+    pub fn boxed_range_error(value: impl Into<String>, typ: impl Into<String>) -> Box<CassError> {
+        Box::new(CassError(CassErrorKind::ValueOutOfRange(
+            value.into(),
+            typ.into(),
+        )))
+    }
+
     pub fn prepare_error(cql: &str, err: PrepareError) -> CassError {
         CassError(CassErrorKind::Prepare(cql.to_string(), err))
     }

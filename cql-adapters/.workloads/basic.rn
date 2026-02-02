@@ -1,0 +1,34 @@
+//! Simple read stress test for benchmarking
+
+const ROW_COUNT = latte::param!("row_count", 10000);
+
+const INSERT = "insert";
+const READ = "read";
+
+const KEYSPACE = "latte_bench";
+const TABLE = "basic";
+
+pub async fn schema(ctx) {
+    ctx.execute(`CREATE KEYSPACE IF NOT EXISTS ${KEYSPACE} 
+                    WITH REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor' : 1 }`).await?;
+    ctx.execute(`DROP TABLE IF EXISTS ${KEYSPACE}.${TABLE}`).await?;
+    ctx.execute(`CREATE TABLE ${KEYSPACE}.${TABLE}(id bigint PRIMARY KEY, data text)`).await?;
+}
+
+pub async fn erase(ctx) {
+    ctx.execute(`TRUNCATE TABLE ${KEYSPACE}.${TABLE}`).await
+}
+
+pub async fn prepare(ctx) {
+    ctx.load_cycle_count = ROW_COUNT;
+    ctx.prepare(INSERT, `INSERT INTO ${KEYSPACE}.${TABLE}(id, data) VALUES (:id, :data)`).await?;
+    ctx.prepare(READ, `SELECT * FROM ${KEYSPACE}.${TABLE} WHERE id = :id`).await?;
+}
+
+pub async fn load(ctx, i) {
+    ctx.execute_prepared(INSERT, [i, latte::text(i, 64)]).await?
+}
+
+pub async fn run(ctx, i) {
+    ctx.execute_prepared(READ, [latte::hash(i) % ROW_COUNT]).await?
+}

@@ -1,0 +1,99 @@
+// CI/CD Integration Test: Basic CRUD Operations
+//
+// Tests: create_table, put_item, get_item, update_item, delete_item
+// Duration: ~10 seconds with 1000 items
+//
+// Usage:
+//   latte schema  --dynamodb --dynamodb-endpoint http://localhost:8000 workloads/dynamodb/cicd/crud.rn
+//   latte load    --dynamodb --dynamodb-endpoint http://localhost:8000 workloads/dynamodb/cicd/crud.rn
+//   latte run -d 10s --dynamodb --dynamodb-endpoint http://localhost:8000 workloads/dynamodb/cicd/crud.rn
+
+const TABLE_NAME = "latte_cicd_crud";
+const ITEM_COUNT = latte::param!("items", 1000);
+
+pub async fn schema(ctx) {
+    // Clean up existing table (ignore errors if doesn't exist)
+    let _ = ctx.delete_table(TABLE_NAME).await;
+
+    // Create table with simple hash key
+    ctx.create_table(
+        TABLE_NAME,
+        [dynamodb::dynamo_key_schema("pk", "HASH")],
+        [dynamodb::dynamo_attribute_def("pk", "S")],
+        Some(dynamodb::dynamo_throughput(100, 100)),
+    ).await?;
+
+    ctx.wait_table_active(TABLE_NAME).await?;
+    Ok(())
+}
+
+pub async fn prepare(ctx) {
+    ctx.load_cycle_count = ITEM_COUNT;
+    Ok(())
+}
+
+pub async fn erase(ctx) {
+    schema(ctx).await?;
+    Ok(())
+}
+
+pub async fn load(ctx, i) {
+    let pk = format!("pk_{:08}", i);
+
+    let item = #{
+        "pk": dynamodb::dynamo_s(pk),
+        "counter": dynamodb::dynamo_n(0),
+        "data": dynamodb::dynamo_s(format!("initial_data_{}", i)),
+        "active": dynamodb::dynamo_bool(true),
+    };
+
+    ctx.put_item(TABLE_NAME, item, None).await?;
+    Ok(())
+}
+
+pub async fn run(ctx, i) {
+    let op = latte::hash_range(i, 100);
+    let pk = format!("pk_{:08}", latte::hash_range(i, ITEM_COUNT));
+    let key = #{ "pk": dynamodb::dynamo_s(pk) };
+
+    if op < 50 {
+        // 50% - Read
+        ctx.get_item(TABLE_NAME, key, Some(#{ "consistent_read": true })).await?;
+    } else if op < 80 {
+        // 30% - Update
+        ctx.update_item(
+            TABLE_NAME,
+            key,
+            Some(#{
+                "update_expression": "SET #c = #c + :inc, #d = :data",
+                "expression_attribute_names": #{ "#c": "counter", "#d": "data" },
+                "expression_attribute_values": #{
+                    ":inc": dynamodb::dynamo_n(1),
+                    ":data": dynamodb::dynamo_s(format!("updated_{}", i)),
+                },
+            }),
+        ).await?;
+    } else if op < 95 {
+        // 15% - Put (overwrite)
+        let item = #{
+            "pk": key["pk"],
+            "counter": dynamodb::dynamo_n(i),
+            "data": dynamodb::dynamo_s(format!("replaced_{}", i)),
+            "active": dynamodb::dynamo_bool(i % 2 == 0),
+        };
+        ctx.put_item(TABLE_NAME, item, None).await?;
+    } else {
+        // 5% - Delete and re-insert
+        let pk_value = key["pk"];
+        ctx.delete_item(TABLE_NAME, key, None).await?;
+        let item = #{
+            "pk": pk_value,
+            "counter": dynamodb::dynamo_n(0),
+            "data": dynamodb::dynamo_s("reinserted"),
+            "active": dynamodb::dynamo_bool(true),
+        };
+        ctx.put_item(TABLE_NAME, item, None).await?;
+    }
+
+    Ok(())
+}

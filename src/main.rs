@@ -23,26 +23,29 @@ use tracing_subscriber::EnvFilter;
 use walkdir::WalkDir;
 
 use crate::config::{
-    AppConfig, Command, ConnectionConf, EditCommand, HdrCommand, Interval, ListCommand,
-    LoadCommand, SchemaCommand, ShowCommand, VersionCommand,
+    AppConfig, Command, ConnectionConf, DynamoDbConf, EditCommand, HdrCommand, Interval,
+    ListCommand, LoadCommand, SchemaCommand, ShowCommand, VersionCommand,
 };
 use crate::error::{LatteError, Result};
-use crate::exec::{par_execute, ExecutionOptions};
+use crate::exec::{par_execute, par_execute_dynamodb, ExecutionOptions};
+use crate::ipc::DockerManager;
 use crate::report::{PathAndSummary, Report, RunConfigCmp};
-use crate::scripting::connect::ClusterInfo;
+use crate::scripting::connect::{connect_ipc, ClusterInfo};
 use crate::scripting::context::Context;
+use crate::scripting::dynamodb::context::DynamoContext;
 use crate::stats::histogram::HistogramWriter;
 use crate::stats::{BenchmarkCmp, BenchmarkStats, Recorder};
 use crate::version::{format_version_info_human, get_formatted_version_info};
 use exec::cycle::BoundedCycleCounter;
 use exec::progress::Progress;
-use exec::workload::{FnRef, Program, Workload, WorkloadStats, LOAD_FN};
+use exec::workload::{DynamoWorkload, FnRef, Program, Workload, WorkloadStats, LOAD_FN};
 use report::plot::plot_graph;
 use report::table::{Alignment, Table};
 
 mod config;
 mod error;
 mod exec;
+mod ipc;
 mod report;
 mod scripting;
 mod stats;
@@ -133,20 +136,69 @@ async fn connect(conf: &ConnectionConf) -> Result<(Context, Option<ClusterInfo>)
     Ok((session, cluster_info))
 }
 
+/// Connects to the server via external driver (IPC mode)
+/// Returns the Context, cluster info, and optionally a DockerManager that must be kept alive.
+async fn connect_external(
+    conn_conf: &ConnectionConf,
+    driver_conf: &config::DriverConf,
+) -> Result<(Context, Option<ClusterInfo>, Option<DockerManager>)> {
+    let (session, docker_manager) = connect_ipc(conn_conf, driver_conf).await?;
+    // In IPC mode, we don't have direct access to cluster info
+    // The driver manages the connection
+    Ok((session, None, docker_manager))
+}
+
+/// Connects to DynamoDB/Alternator and returns a DynamoContext.
+/// Returns the context and an optional DockerManager that must be kept alive
+/// for the duration of the benchmark (dropping it stops the container).
+async fn connect_dynamodb(conf: &DynamoDbConf) -> Result<(DynamoContext, Option<DockerManager>)> {
+    let endpoint_display = conf.endpoint.as_deref().unwrap_or("AWS DynamoDB");
+    eprintln!("info: Connecting to DynamoDB at {}...", endpoint_display);
+    let (context, docker_manager) = DynamoContext::new(conf.clone())
+        .await
+        .map_err(|e| LatteError::Configuration(format!("Failed to connect to DynamoDB: {}", e)))?;
+
+    if context.is_alternator() {
+        eprintln!("info: Connected to Alternator");
+    } else {
+        eprintln!("info: Connected to DynamoDB (region: {})", conf.region);
+    }
+    Ok((context, docker_manager))
+}
+
 /// Runs the `schema` function of the workload script.
 /// Exits with error if the `schema` function is not present or fails.
 async fn schema(conf: SchemaCommand) -> Result<()> {
     let mut program = load_workload_script(&conf.workload, &conf.params)?;
-    let (mut session, _) = connect(&conf.connection).await?;
+
     if !program.has_schema() {
         eprintln!("error: Function `schema` not found in the workload script.");
         exit(255);
     }
+
     eprintln!("info: Creating schema...");
-    if let Err(e) = program.schema(&mut session).await {
-        eprintln!("error: Failed to create schema: {e}");
-        exit(255);
+
+    if conf.dynamodb.is_enabled() {
+        // DynamoDB mode
+        let (mut session, _docker_manager) = connect_dynamodb(&conf.dynamodb).await?;
+        if let Err(e) = program.schema_dynamodb(&mut session).await {
+            eprintln!("error: Failed to create schema: {e}");
+            exit(255);
+        }
+    } else {
+        // CQL mode
+        let (mut session, _, _docker_manager) = if conf.driver.is_external() {
+            connect_external(&conf.connection, &conf.driver).await?
+        } else {
+            let (ctx, info) = connect(&conf.connection).await?;
+            (ctx, info, None)
+        };
+        if let Err(e) = program.schema(&mut session).await {
+            eprintln!("error: Failed to create schema: {e}");
+            exit(255);
+        }
     }
+
     eprintln!("info: Schema created successfully");
     Ok(())
 }
@@ -155,62 +207,136 @@ async fn schema(conf: SchemaCommand) -> Result<()> {
 /// Exits with error if the `load` function is not present or fails.
 async fn load(conf: LoadCommand) -> Result<()> {
     let mut program = load_workload_script(&conf.workload, &conf.params)?;
-    let (mut session, _) = connect(&conf.connection).await?;
 
-    if program.has_prepare() {
-        eprintln!("info: Preparing...");
-        if let Err(e) = program.prepare(&mut session).await {
-            eprintln!("error: Failed to prepare: {e}");
+    if conf.dynamodb.is_enabled() {
+        // DynamoDB mode
+        let (mut session, _docker_manager) = connect_dynamodb(&conf.dynamodb).await?;
+
+        if program.has_prepare() {
+            eprintln!("info: Preparing...");
+            if let Err(e) = program.prepare_dynamodb(&mut session).await {
+                eprintln!("error: Failed to prepare: {e}");
+                exit(255);
+            }
+        }
+
+        let load_count = session.load_cycle_count;
+        if load_count > 0 && !program.has_load() {
+            eprintln!("error: Function `load` not found in the workload script.");
             exit(255);
         }
-    }
 
-    let load_count = session.load_cycle_count;
-    if load_count > 0 && !program.has_load() {
-        eprintln!("error: Function `load` not found in the workload script.");
-        exit(255);
-    }
+        if program.has_erase() {
+            eprintln!("info: Erasing data...");
+            if let Err(e) = program.erase_dynamodb(&mut session).await {
+                eprintln!("error: Failed to erase: {e}");
+                exit(255);
+            }
+        }
 
-    if program.has_erase() {
-        eprintln!("info: Erasing data...");
-        if let Err(e) = program.erase(&mut session).await {
-            eprintln!("error: Failed to erase: {e}");
+        eprintln!("info: Loading data...");
+        let loader = DynamoWorkload::new(
+            session.clone_for_thread().map_err(|e| {
+                LatteError::Configuration(format!("Failed to clone DynamoDB context: {}", e))
+            })?,
+            program.clone(),
+            &[(FnRef::new(LOAD_FN), 1.0)],
+        );
+        let load_options = ExecutionOptions {
+            duration: config::Interval::Count(load_count),
+            cycle_range: (0, i64::MAX),
+            rate: conf.rate.rate,
+            rate_sine_amplitude: conf.rate.rate_sine_amplitude,
+            rate_sine_period: conf.rate.rate_sine_period,
+            threads: conf.threads,
+            concurrency: conf.concurrency,
+        };
+        let result = par_execute_dynamodb(
+            "Loading...",
+            &load_options,
+            config::Interval::Unbounded,
+            loader,
+            !conf.quiet,
+            false,
+            &mut None,
+        )
+        .await?;
+
+        if result.error_count > 0 {
+            for e in result.errors {
+                eprintln!("error: {e}");
+            }
+            eprintln!("error: Errors encountered when loading data. Some data might be missing.");
+            // Exit directly with error code after reporting errors to stderr.
+            // This is intentional CLI behavior - errors have been displayed to the user.
+            exit(255)
+        }
+    } else {
+        // CQL mode
+        let (mut session, _, _docker_manager) = if conf.driver.is_external() {
+            connect_external(&conf.connection, &conf.driver).await?
+        } else {
+            let (ctx, info) = connect(&conf.connection).await?;
+            (ctx, info, None)
+        };
+
+        if program.has_prepare() {
+            eprintln!("info: Preparing...");
+            if let Err(e) = program.prepare(&mut session).await {
+                eprintln!("error: Failed to prepare: {e}");
+                exit(255);
+            }
+        }
+
+        let load_count = session.load_cycle_count;
+        if load_count > 0 && !program.has_load() {
+            eprintln!("error: Function `load` not found in the workload script.");
             exit(255);
         }
-    }
 
-    eprintln!("info: Loading data...");
-    let loader = Workload::new(
-        session.clone()?,
-        program.clone(),
-        &[(FnRef::new(LOAD_FN), 1.0)],
-    );
-    let load_options = ExecutionOptions {
-        duration: config::Interval::Count(load_count),
-        cycle_range: (0, i64::MAX),
-        rate: conf.rate.rate,
-        rate_sine_amplitude: conf.rate.rate_sine_amplitude,
-        rate_sine_period: conf.rate.rate_sine_period,
-        threads: conf.threads,
-        concurrency: conf.concurrency,
-    };
-    let result = par_execute(
-        "Loading...",
-        &load_options,
-        config::Interval::Unbounded,
-        loader,
-        !conf.quiet,
-        false,
-        &mut None,
-    )
-    .await?;
-
-    if result.error_count > 0 {
-        for e in result.errors {
-            eprintln!("error: {e}");
+        if program.has_erase() {
+            eprintln!("info: Erasing data...");
+            if let Err(e) = program.erase(&mut session).await {
+                eprintln!("error: Failed to erase: {e}");
+                exit(255);
+            }
         }
-        eprintln!("error: Errors encountered when loading data. Some data might be missing.");
-        exit(255)
+
+        eprintln!("info: Loading data...");
+        let loader = Workload::new(
+            session.clone()?,
+            program.clone(),
+            &[(FnRef::new(LOAD_FN), 1.0)],
+        );
+        let load_options = ExecutionOptions {
+            duration: config::Interval::Count(load_count),
+            cycle_range: (0, i64::MAX),
+            rate: conf.rate.rate,
+            rate_sine_amplitude: conf.rate.rate_sine_amplitude,
+            rate_sine_period: conf.rate.rate_sine_period,
+            threads: conf.threads,
+            concurrency: conf.concurrency,
+        };
+        let result = par_execute(
+            "Loading...",
+            &load_options,
+            config::Interval::Unbounded,
+            loader,
+            !conf.quiet,
+            false,
+            &mut None,
+        )
+        .await?;
+
+        if result.error_count > 0 {
+            for e in result.errors {
+                eprintln!("error: {e}");
+            }
+            eprintln!("error: Errors encountered when loading data. Some data might be missing.");
+            // Exit directly with error code after reporting errors to stderr.
+            // This is intentional CLI behavior - errors have been displayed to the user.
+            exit(255)
+        }
     }
     Ok(())
 }
@@ -234,115 +360,238 @@ async fn run(conf: RunCommand) -> Result<()> {
         functions.push((function, f.weight))
     }
 
-    let (mut session, cluster_info) = connect(&conf.connection).await?;
-    if let Some(cluster_info) = cluster_info {
-        conf.cluster_name = Some(cluster_info.name);
-        conf.db_version = Some(cluster_info.db_version);
-    }
+    let stats = if conf.dynamodb.is_enabled() {
+        // DynamoDB mode
+        let (mut session, _docker_manager) = connect_dynamodb(&conf.dynamodb).await?;
 
-    if program.has_prepare() {
-        eprintln!("info: Preparing...");
-        if let Err(e) = program.prepare(&mut session).await {
-            eprintln!("error: Failed to prepare: {e}");
-            exit(255);
+        if program.has_prepare() {
+            eprintln!("info: Preparing...");
+            if let Err(e) = program.prepare_dynamodb(&mut session).await {
+                eprintln!("error: Failed to prepare: {e}");
+                exit(255);
+            }
         }
-    }
 
-    let runner = Workload::new(session.clone()?, program.clone(), &functions);
-    if conf.warmup_duration.is_not_zero() {
-        eprintln!("info: Warming up...");
-        let warmup_options = ExecutionOptions {
-            duration: conf.warmup_duration,
+        let runner = DynamoWorkload::new(
+            session.clone_for_thread().map_err(|e| {
+                LatteError::Configuration(format!("Failed to clone DynamoDB context: {}", e))
+            })?,
+            program.clone(),
+            &functions,
+        );
+        if conf.warmup_duration.is_not_zero() {
+            eprintln!("info: Warming up...");
+            let warmup_options = ExecutionOptions {
+                duration: conf.warmup_duration,
+                cycle_range: (conf.start_cycle, conf.end_cycle),
+                rate: None,
+                rate_sine_amplitude: conf.rate.rate_sine_amplitude,
+                rate_sine_period: conf.rate.rate_sine_period,
+                threads: conf.threads,
+                concurrency: conf.concurrency,
+            };
+            par_execute_dynamodb(
+                "Warming up...",
+                &warmup_options,
+                Interval::Unbounded,
+                runner.clone()?,
+                !conf.quiet,
+                false,
+                &mut None,
+            )
+            .await?;
+        }
+
+        eprintln!("info: Running benchmark...");
+
+        println!(
+            "{}",
+            RunConfigCmp {
+                v1: &conf,
+                v2: compare.as_ref().map(|c| &c.conf),
+            }
+        );
+
+        let exec_options = ExecutionOptions {
+            duration: conf.run_duration,
             cycle_range: (conf.start_cycle, conf.end_cycle),
-            rate: None,
+            concurrency: conf.concurrency,
+            rate: conf.rate.rate,
             rate_sine_amplitude: conf.rate.rate_sine_amplitude,
             rate_sine_period: conf.rate.rate_sine_period,
             threads: conf.threads,
-            concurrency: conf.concurrency,
         };
-        par_execute(
-            "Warming up...",
-            &warmup_options,
-            Interval::Unbounded,
-            runner.clone()?,
-            !conf.quiet,
-            false,
-            &mut None,
-        )
-        .await?;
-    }
 
-    eprintln!("info: Running benchmark...");
+        report::print_log_header();
+        match conf.hdrfile {
+            Some(ref hdrfile) => {
+                let path = Path::new(&hdrfile);
+                if let Some(parent_dir) = path.parent() {
+                    fs::create_dir_all(parent_dir)
+                        .map_err(|e| LatteError::LogFileCreate(hdrfile.clone(), e))?;
+                }
+                let hdrfile = File::create(hdrfile)
+                    .map_err(|e| LatteError::LogFileCreate(hdrfile.to_path_buf(), e))?;
+                let (non_blocking_writer, _hdrh_guard) = tracing_appender::non_blocking(hdrfile);
+                let non_blocking_writer = Box::new(non_blocking_writer);
+                let serializer = Box::new(V2DeflateSerializer::new());
+                let system_time_now = SystemTime::now();
+                // Intentional leak: `IntervalLogWriterBuilder::begin_log_with` requires 'static
+                // references. These objects must live for the entire benchmark run. The leak is
+                // acceptable because: (1) this code runs at most once per process execution,
+                // (2) the leaked memory is small and fixed-size, (3) the process exits after
+                // the benchmark completes.
+                let hdrh_writer = interval_log::IntervalLogWriterBuilder::new()
+                    .add_comment(format!("[Logged with Latte {VERSION}]").as_str())
+                    .with_start_time(system_time_now)
+                    .with_base_time(system_time_now)
+                    .with_max_value_divisor(1000000.0) // ms
+                    .begin_log_with(Box::leak(non_blocking_writer), Box::leak(serializer))
+                    .unwrap();
+                let boxed_hdrh_writer: Box<dyn HistogramWriter + Send + Sync> =
+                    Box::new(hdrh_writer);
 
-    println!(
-        "{}",
-        RunConfigCmp {
-            v1: &conf,
-            v2: compare.as_ref().map(|c| &c.conf),
-        }
-    );
-
-    let exec_options = ExecutionOptions {
-        duration: conf.run_duration,
-        cycle_range: (conf.start_cycle, conf.end_cycle),
-        concurrency: conf.concurrency,
-        rate: conf.rate.rate,
-        rate_sine_amplitude: conf.rate.rate_sine_amplitude,
-        rate_sine_period: conf.rate.rate_sine_period,
-        threads: conf.threads,
-    };
-
-    report::print_log_header();
-    let stats = match conf.hdrfile {
-        Some(ref hdrfile) => {
-            let path = Path::new(&hdrfile);
-            if let Some(parent_dir) = path.parent() {
-                fs::create_dir_all(parent_dir)
-                    .map_err(|e| LatteError::LogFileCreate(hdrfile.clone(), e))?;
+                par_execute_dynamodb(
+                    "Running...",
+                    &exec_options,
+                    conf.sampling_interval,
+                    runner,
+                    !conf.quiet,
+                    conf.generate_report,
+                    &mut Some(boxed_hdrh_writer),
+                )
+                .await?
             }
-            let hdrfile = File::create(hdrfile)
-                .map_err(|e| LatteError::LogFileCreate(hdrfile.to_path_buf(), e))?;
-            let (non_blocking_writer, _hdrh_guard) = tracing_appender::non_blocking(hdrfile);
-            let non_blocking_writer = Box::new(non_blocking_writer);
-            let serializer = Box::new(V2DeflateSerializer::new());
-            let system_time_now = SystemTime::now();
-            let hdrh_writer = interval_log::IntervalLogWriterBuilder::new()
-                .add_comment(format!("[Logged with Latte {VERSION}]").as_str())
-                .with_start_time(system_time_now)
-                .with_base_time(system_time_now)
-                .with_max_value_divisor(1000000.0) // ms
-                .begin_log_with(Box::leak(non_blocking_writer), Box::leak(serializer))
-                .unwrap();
-            let boxed_hdrh_writer: Box<dyn HistogramWriter + Send + Sync> = Box::new(hdrh_writer);
-
-            par_execute(
-                "Running...",
-                &exec_options,
-                conf.sampling_interval,
-                runner,
-                !conf.quiet,
-                conf.generate_report,
-                &mut Some(boxed_hdrh_writer),
-            )
-            .await
+            None => {
+                par_execute_dynamodb(
+                    "Running...",
+                    &exec_options,
+                    conf.sampling_interval,
+                    runner,
+                    !conf.quiet,
+                    conf.generate_report,
+                    &mut None,
+                )
+                .await?
+            }
         }
-        None => {
+    } else {
+        // CQL mode
+        let (mut session, cluster_info, _docker_manager) = if conf.driver.is_external() {
+            connect_external(&conf.connection, &conf.driver).await?
+        } else {
+            let (ctx, info) = connect(&conf.connection).await?;
+            (ctx, info, None)
+        };
+        if let Some(cluster_info) = cluster_info {
+            conf.cluster_name = Some(cluster_info.name);
+            conf.db_version = Some(cluster_info.db_version);
+        }
+
+        if program.has_prepare() {
+            eprintln!("info: Preparing...");
+            if let Err(e) = program.prepare(&mut session).await {
+                eprintln!("error: Failed to prepare: {e}");
+                exit(255);
+            }
+        }
+
+        let runner = Workload::new(session.clone()?, program.clone(), &functions);
+        if conf.warmup_duration.is_not_zero() {
+            eprintln!("info: Warming up...");
+            let warmup_options = ExecutionOptions {
+                duration: conf.warmup_duration,
+                cycle_range: (conf.start_cycle, conf.end_cycle),
+                rate: None,
+                rate_sine_amplitude: conf.rate.rate_sine_amplitude,
+                rate_sine_period: conf.rate.rate_sine_period,
+                threads: conf.threads,
+                concurrency: conf.concurrency,
+            };
             par_execute(
-                "Running...",
-                &exec_options,
-                conf.sampling_interval,
-                runner,
+                "Warming up...",
+                &warmup_options,
+                Interval::Unbounded,
+                runner.clone()?,
                 !conf.quiet,
-                conf.generate_report,
+                false,
                 &mut None,
             )
-            .await
+            .await?;
         }
-    };
-    let stats = match stats {
-        Ok(stats) => stats,
-        Err(e) => {
-            return Err(e);
+
+        eprintln!("info: Running benchmark...");
+
+        println!(
+            "{}",
+            RunConfigCmp {
+                v1: &conf,
+                v2: compare.as_ref().map(|c| &c.conf),
+            }
+        );
+
+        let exec_options = ExecutionOptions {
+            duration: conf.run_duration,
+            cycle_range: (conf.start_cycle, conf.end_cycle),
+            concurrency: conf.concurrency,
+            rate: conf.rate.rate,
+            rate_sine_amplitude: conf.rate.rate_sine_amplitude,
+            rate_sine_period: conf.rate.rate_sine_period,
+            threads: conf.threads,
+        };
+
+        report::print_log_header();
+        match conf.hdrfile {
+            Some(ref hdrfile) => {
+                let path = Path::new(&hdrfile);
+                if let Some(parent_dir) = path.parent() {
+                    fs::create_dir_all(parent_dir)
+                        .map_err(|e| LatteError::LogFileCreate(hdrfile.clone(), e))?;
+                }
+                let hdrfile = File::create(hdrfile)
+                    .map_err(|e| LatteError::LogFileCreate(hdrfile.to_path_buf(), e))?;
+                let (non_blocking_writer, _hdrh_guard) = tracing_appender::non_blocking(hdrfile);
+                let non_blocking_writer = Box::new(non_blocking_writer);
+                let serializer = Box::new(V2DeflateSerializer::new());
+                let system_time_now = SystemTime::now();
+                // Intentional leak: `IntervalLogWriterBuilder::begin_log_with` requires 'static
+                // references. These objects must live for the entire benchmark run. The leak is
+                // acceptable because: (1) this code runs at most once per process execution,
+                // (2) the leaked memory is small and fixed-size, (3) the process exits after
+                // the benchmark completes.
+                let hdrh_writer = interval_log::IntervalLogWriterBuilder::new()
+                    .add_comment(format!("[Logged with Latte {VERSION}]").as_str())
+                    .with_start_time(system_time_now)
+                    .with_base_time(system_time_now)
+                    .with_max_value_divisor(1000000.0) // ms
+                    .begin_log_with(Box::leak(non_blocking_writer), Box::leak(serializer))
+                    .unwrap();
+                let boxed_hdrh_writer: Box<dyn HistogramWriter + Send + Sync> =
+                    Box::new(hdrh_writer);
+
+                par_execute(
+                    "Running...",
+                    &exec_options,
+                    conf.sampling_interval,
+                    runner,
+                    !conf.quiet,
+                    conf.generate_report,
+                    &mut Some(boxed_hdrh_writer),
+                )
+                .await?
+            }
+            None => {
+                par_execute(
+                    "Running...",
+                    &exec_options,
+                    conf.sampling_interval,
+                    runner,
+                    !conf.quiet,
+                    conf.generate_report,
+                    &mut None,
+                )
+                .await?
+            }
         }
     };
 
@@ -353,7 +602,7 @@ async fn run(conf: RunCommand) -> Result<()> {
     println!();
     println!("{}", &stats_cmp);
 
-    if stats_cmp.v1.log.len() > 1 {
+    if !stats_cmp.v1.log.is_empty() {
         let path = conf
             .output
             .clone()
@@ -609,6 +858,8 @@ fn run_id() -> String {
 
 fn main() {
     // NOTE: use 2 new lines because 'latte --version' concatenates the app name and its version
+    // Intentional leak: clap's `.version()` requires a 'static str. This is a one-time allocation
+    // at program startup that lives for the entire process lifetime.
     let boxed_version = format!("\n\n{}", format_version_info_human()).into_boxed_str();
     let static_version: &'static str = Box::leak(boxed_version);
     let app_cmd = AppConfig::command().version(static_version);

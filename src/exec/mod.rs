@@ -21,6 +21,7 @@ use crate::{
     BenchmarkStats, BoundedCycleCounter, Interval, Progress, Recorder, Workload, WorkloadStats,
 };
 use chunks::ChunksExt;
+use workload::DynamoWorkload;
 
 mod chunks;
 pub mod cycle;
@@ -321,6 +322,172 @@ pub async fn par_execute(
 
     for _ in 0..thread_count {
         let s = spawn_stream(
+            concurrency,
+            rate.map(|r| r / (thread_count as f64)),
+            rate_sine_amplitude,
+            rate_sine_frequency,
+            sampling,
+            workload.clone()?,
+            deadline.share(),
+            progress.clone(),
+        );
+        streams.push(s);
+    }
+
+    loop {
+        let partial_stats = receive_one_of_each(&mut streams).await;
+        let partial_stats: Vec<_> = partial_stats.into_iter().try_collect()?;
+        if partial_stats.is_empty() {
+            break Ok(stats.finish());
+        }
+
+        let aggregate = stats.record(&partial_stats);
+        if sampling.is_bounded() {
+            progress.set_visible(false);
+            println!("{aggregate}");
+            progress.set_visible(show_progress);
+        }
+    }
+}
+
+// ==================== DynamoDB Execution ====================
+
+/// Runs a stream of workload cycles for DynamoDB till completion.
+async fn run_dynamo_stream(
+    stream: impl Stream<Item = Instant> + std::marker::Unpin,
+    workload: DynamoWorkload,
+    cycle_counter: BoundedCycleCounter,
+    concurrency: NonZeroUsize,
+    sampling: Interval,
+    progress: Arc<StatusLine<Progress>>,
+    mut out: Sender<Result<WorkloadStats>>,
+) {
+    let mut iter_counter = cycle_counter;
+    let sample_size = sampling.count().unwrap_or(u64::MAX);
+    let sample_duration = sampling.period().unwrap_or(tokio::time::Duration::MAX);
+
+    let stats_stream = stream
+        .map(|scheduled_time| iter_counter.next().map(|cycle| (cycle, scheduled_time)))
+        .take_while(|opt| ready(opt.is_some()))
+        .map(|opt| {
+            let (cycle, scheduled_time) = opt.unwrap();
+            tokio::task::unconstrained(workload.run(cycle, scheduled_time))
+        })
+        .buffer_unordered(concurrency.get())
+        .inspect(|_| progress.tick())
+        .take_until(ctrl_c())
+        .terminate_after_error()
+        .chunks_aggregated(sample_size, sample_duration, Vec::new, |errors, result| {
+            if let Err(e) = result {
+                errors.push(e)
+            }
+        })
+        .map(|errors| (workload.take_stats(Instant::now()), errors));
+
+    pin_mut!(stats_stream);
+
+    workload.reset(Instant::now());
+    while let Some((stats, errors)) = stats_stream.next().await {
+        if out.send(Ok(stats)).await.is_err() {
+            return;
+        }
+        for err in errors {
+            if out.send(Err(err)).await.is_err() {
+                return;
+            }
+        }
+    }
+}
+
+/// Launches a new worker task that runs a series of invocations of the DynamoDB workload function.
+#[allow(clippy::too_many_arguments)]
+fn spawn_dynamo_stream(
+    concurrency: NonZeroUsize,
+    rate: Option<f64>,
+    rate_sine_amplitude: Option<f64>,
+    rate_sine_frequency: f64,
+    sampling: Interval,
+    workload: DynamoWorkload,
+    iter_counter: BoundedCycleCounter,
+    progress: Arc<StatusLine<Progress>>,
+) -> Receiver<Result<WorkloadStats>> {
+    let (tx, rx) = channel(1);
+
+    tokio::spawn(async move {
+        match rate {
+            Some(rate) => {
+                let stream = sinusoidal_interval_stream(
+                    rate,
+                    rate_sine_amplitude.unwrap_or(0.0) * rate,
+                    rate_sine_frequency,
+                );
+                run_dynamo_stream(
+                    stream,
+                    workload,
+                    iter_counter,
+                    concurrency,
+                    sampling,
+                    progress,
+                    tx,
+                )
+                .await
+            }
+            None => {
+                let stream = futures::stream::repeat_with(Instant::now);
+                run_dynamo_stream(
+                    stream,
+                    workload,
+                    iter_counter,
+                    concurrency,
+                    sampling,
+                    progress,
+                    tx,
+                )
+                .await
+            }
+        }
+    });
+    rx
+}
+
+/// Executes the given DynamoDB workload function many times in parallel.
+pub async fn par_execute_dynamodb(
+    name: &str,
+    exec_options: &ExecutionOptions,
+    sampling: Interval,
+    workload: DynamoWorkload,
+    show_progress: bool,
+    keep_log: bool,
+    hdrh_writer: &mut Option<Box<dyn HistogramWriter>>,
+) -> Result<BenchmarkStats> {
+    if exec_options.cycle_range.1 <= exec_options.cycle_range.0 {
+        return Err(LatteError::Configuration(format!(
+            "End cycle {} must not be lower than start cycle {}",
+            exec_options.cycle_range.1, exec_options.cycle_range.0
+        )));
+    }
+
+    let thread_count = exec_options.threads.get();
+    let concurrency = exec_options.concurrency;
+    let rate = exec_options.rate;
+    let rate_sine_amplitude = exec_options.rate_sine_amplitude;
+    let rate_sine_frequency = 1.0 / exec_options.rate_sine_period.as_secs_f64();
+    let progress = match exec_options.duration {
+        Interval::Count(count) => Progress::with_count(name.to_string(), count),
+        Interval::Time(duration) => Progress::with_duration(name.to_string(), duration),
+        Interval::Unbounded => unreachable!(),
+    };
+    let progress_opts = status_line::Options {
+        initially_visible: show_progress,
+        ..Default::default()
+    };
+    let progress = Arc::new(StatusLine::with_options(progress, progress_opts));
+    let deadline = BoundedCycleCounter::new(exec_options.duration, exec_options.cycle_range);
+    let mut streams = Vec::with_capacity(thread_count);
+    let mut stats = Recorder::start(rate, concurrency, keep_log, hdrh_writer);
+
+    for _ in 0..thread_count {
+        let s = spawn_dynamo_stream(
             concurrency,
             rate.map(|r| r / (thread_count as f64)),
             rate_sine_amplitude,

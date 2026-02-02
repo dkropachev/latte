@@ -1,0 +1,107 @@
+// CI/CD Integration Test: Batch Operations
+//
+// Tests: batch_write_item, batch_get_item
+// Duration: ~10 seconds
+//
+// Usage:
+//   latte schema  --dynamodb --dynamodb-endpoint http://localhost:8000 workloads/dynamodb/cicd/batch.rn
+//   latte load    --dynamodb --dynamodb-endpoint http://localhost:8000 workloads/dynamodb/cicd/batch.rn
+//   latte run -d 10s --dynamodb --dynamodb-endpoint http://localhost:8000 workloads/dynamodb/cicd/batch.rn
+
+const TABLE_NAME = "latte_cicd_batch";
+const ITEM_COUNT = latte::param!("items", 5000);
+const BATCH_SIZE = latte::param!("batch_size", 25);  // Max 25 for DynamoDB compatibility
+
+pub async fn schema(ctx) {
+    // Clean up existing table (ignore errors if doesn't exist)
+    let _ = ctx.delete_table(TABLE_NAME).await;
+
+    ctx.create_table(
+        TABLE_NAME,
+        [dynamodb::dynamo_key_schema("pk", "HASH")],
+        [dynamodb::dynamo_attribute_def("pk", "S")],
+        Some(dynamodb::dynamo_throughput(200, 200)),
+    ).await?;
+
+    ctx.wait_table_active(TABLE_NAME).await?;
+    Ok(())
+}
+
+pub async fn prepare(ctx) {
+    // Each load cycle writes a batch
+    ctx.load_cycle_count = ITEM_COUNT / BATCH_SIZE;
+    Ok(())
+}
+
+pub async fn erase(ctx) {
+    schema(ctx).await?;
+    Ok(())
+}
+
+pub async fn load(ctx, i) {
+    // Build batch of put requests
+    let requests = [];
+    for j in 0..BATCH_SIZE {
+        let item_id = i * BATCH_SIZE + j;
+        let pk = format!("batch_item_{:08}", item_id);
+
+        let item = #{
+            "pk": dynamodb::dynamo_s(pk),
+            "batch_num": dynamodb::dynamo_n(i),
+            "seq": dynamodb::dynamo_n(j),
+            "value": dynamodb::dynamo_n(item_id),
+        };
+
+        requests.push(#{ "put": item });
+    }
+
+    // Note: Can't use #{ TABLE_NAME: requests } - Rune doesn't substitute constants as keys
+    let req_items = #{};
+    req_items[TABLE_NAME] = requests;
+    ctx.batch_write_item(req_items).await?;
+    Ok(())
+}
+
+pub async fn run(ctx, i) {
+    let op = latte::hash_range(i, 100);
+    // Note: hash_range must be called outside loops to avoid Rune runtime issues
+    let base_id = latte::hash_range(i * BATCH_SIZE, ITEM_COUNT);
+
+    if op < 60 {
+        // 60% - Batch get
+        let keys = [];
+        for j in 0..BATCH_SIZE {
+            let item_id = (base_id + j) % ITEM_COUNT;
+            let pk = format!("batch_item_{:08}", item_id);
+            keys.push(#{ "pk": dynamodb::dynamo_s(pk) });
+        }
+
+        let req_items = #{};
+        req_items[TABLE_NAME] = keys;
+        let results = ctx.batch_get_item(req_items).await?;
+
+    } else {
+        // 40% - Batch write (updates)
+        let requests = [];
+        for j in 0..BATCH_SIZE {
+            let item_id = (base_id + j) % ITEM_COUNT;
+            let pk = format!("batch_item_{:08}", item_id);
+
+            let item = #{
+                "pk": dynamodb::dynamo_s(pk),
+                "batch_num": dynamodb::dynamo_n(i),
+                "seq": dynamodb::dynamo_n(j),
+                "value": dynamodb::dynamo_n(i * 1000 + j),
+                "updated": dynamodb::dynamo_bool(true),
+            };
+
+            requests.push(#{ "put": item });
+        }
+
+        let req_items = #{};
+        req_items[TABLE_NAME] = requests;
+        ctx.batch_write_item(req_items).await?;
+    }
+
+    Ok(())
+}

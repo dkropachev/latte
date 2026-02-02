@@ -1,0 +1,221 @@
+name: Adapter - Scylla Rust Driver
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'cql-adapters/scylla-rust-driver/**'
+      - 'cql-adapters/workloads/**'
+      - '.github/workflows/adapter-scylla-rust-driver.yml'
+  pull_request:
+    paths:
+      - 'cql-adapters/scylla-rust-driver/**'
+      - 'cql-adapters/workloads/**'
+      - '.github/workflows/adapter-scylla-rust-driver.yml'
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: -Dwarnings
+
+defaults:
+  run:
+    working-directory: cql-adapters/scylla-rust-driver
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-action@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            cql-adapters/scylla-rust-driver/target/
+          key: ${{ runner.os }}-cargo-scylla-rust-${{ hashFiles('cql-adapters/scylla-rust-driver/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-scylla-rust-
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Run clippy
+        run: cargo clippy --all-targets
+
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-action@stable
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            cql-adapters/scylla-rust-driver/target/
+          key: ${{ runner.os }}-cargo-scylla-rust-${{ hashFiles('cql-adapters/scylla-rust-driver/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-scylla-rust-
+
+      - name: Run unit tests
+        run: cargo test
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-action@stable
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            cql-adapters/scylla-rust-driver/target/
+          key: ${{ runner.os }}-cargo-scylla-rust-${{ hashFiles('cql-adapters/scylla-rust-driver/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-scylla-rust-
+
+      - name: Build release
+        run: cargo build --release
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: latte-driver-scylla-rust
+          path: cql-adapters/scylla-rust-driver/target/release/latte-driver
+          retention-days: 1
+
+  integration:
+    name: Integration Tests
+    needs: build
+    runs-on: ubuntu-latest
+    services:
+      scylla:
+        image: scylladb/scylla:latest
+        ports:
+          - 9042:9042
+        options: >-
+          --health-cmd "cqlsh -e 'SELECT now() FROM system.local'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-action@stable
+
+      - name: Cache cargo (latte)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-latte-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-latte-
+
+      - name: Build latte
+        working-directory: .
+        run: cargo build --release
+
+      - name: Download adapter artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: latte-driver-scylla-rust
+          path: cql-adapters/scylla-rust-driver/target/release/
+
+      - name: Make binaries executable
+        run: |
+          chmod +x target/release/latte
+          chmod +x cql-adapters/scylla-rust-driver/target/release/latte-driver
+        working-directory: .
+
+      - name: Run integration tests
+        run: make test-integration
+        env:
+          LATTE_BIN: ${{ github.workspace }}/target/release/latte
+          SCYLLA_CONTACT_POINTS: 127.0.0.1:9042
+
+  benchmark:
+    name: Benchmark Tests
+    needs: build
+    runs-on: ubuntu-latest
+    services:
+      scylla:
+        image: scylladb/scylla:latest
+        ports:
+          - 9042:9042
+        options: >-
+          --health-cmd "cqlsh -e 'SELECT now() FROM system.local'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-action@stable
+
+      - name: Cache cargo (latte)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-latte-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-latte-
+
+      - name: Build latte
+        working-directory: .
+        run: cargo build --release
+
+      - name: Download adapter artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: latte-driver-scylla-rust
+          path: cql-adapters/scylla-rust-driver/target/release/
+
+      - name: Make binaries executable
+        run: |
+          chmod +x target/release/latte
+          chmod +x cql-adapters/scylla-rust-driver/target/release/latte-driver
+        working-directory: .
+
+      - name: Run benchmark tests
+        run: make test-benchmark
+        env:
+          LATTE_BIN: ${{ github.workspace }}/target/release/latte
+          SCYLLA_CONTACT_POINTS: 127.0.0.1:9042
+          BENCHMARK_DURATION: 5s

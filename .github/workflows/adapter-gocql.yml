@@ -1,0 +1,197 @@
+name: Adapter - GoCQL
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'cql-adapters/gocql/**'
+      - 'cql-adapters/workloads/**'
+      - '.github/workflows/adapter-gocql.yml'
+  pull_request:
+    paths:
+      - 'cql-adapters/gocql/**'
+      - 'cql-adapters/workloads/**'
+      - '.github/workflows/adapter-gocql.yml'
+
+defaults:
+  run:
+    working-directory: cql-adapters/gocql
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: cql-adapters/gocql/go.mod
+          cache-dependency-path: cql-adapters/gocql/go.sum
+
+      - name: Install golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          working-directory: cql-adapters/gocql
+
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: cql-adapters/gocql/go.mod
+          cache-dependency-path: cql-adapters/gocql/go.sum
+
+      - name: Run unit tests
+        run: go test -v ./...
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: cql-adapters/gocql/go.mod
+          cache-dependency-path: cql-adapters/gocql/go.sum
+
+      - name: Build release
+        run: CGO_ENABLED=0 go build -ldflags="-s -w" -o latte-gocql-driver .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: latte-driver-gocql
+          path: cql-adapters/gocql/latte-gocql-driver
+          retention-days: 1
+
+  integration:
+    name: Integration Tests
+    needs: build
+    runs-on: ubuntu-latest
+    services:
+      scylla:
+        image: scylladb/scylla:latest
+        ports:
+          - 9042:9042
+        options: >-
+          --health-cmd "cqlsh -e 'SELECT now() FROM system.local'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: cql-adapters/gocql/go.mod
+          cache-dependency-path: cql-adapters/gocql/go.sum
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-action@stable
+
+      - name: Cache cargo (latte)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-latte-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-latte-
+
+      - name: Build latte
+        working-directory: .
+        run: cargo build --release
+
+      - name: Download adapter artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: latte-driver-gocql
+          path: cql-adapters/gocql/
+
+      - name: Make binaries executable
+        run: |
+          chmod +x target/release/latte
+          chmod +x cql-adapters/gocql/latte-gocql-driver
+        working-directory: .
+
+      - name: Run integration tests
+        run: make test-integration
+        env:
+          LATTE_BIN: ${{ github.workspace }}/target/release/latte
+          SCYLLA_CONTACT_POINTS: 127.0.0.1:9042
+
+  benchmark:
+    name: Benchmark Tests
+    needs: build
+    runs-on: ubuntu-latest
+    services:
+      scylla:
+        image: scylladb/scylla:latest
+        ports:
+          - 9042:9042
+        options: >-
+          --health-cmd "cqlsh -e 'SELECT now() FROM system.local'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: cql-adapters/gocql/go.mod
+          cache-dependency-path: cql-adapters/gocql/go.sum
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-action@stable
+
+      - name: Cache cargo (latte)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-latte-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-latte-
+
+      - name: Build latte
+        working-directory: .
+        run: cargo build --release
+
+      - name: Download adapter artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: latte-driver-gocql
+          path: cql-adapters/gocql/
+
+      - name: Make binaries executable
+        run: |
+          chmod +x target/release/latte
+          chmod +x cql-adapters/gocql/latte-gocql-driver
+        working-directory: .
+
+      - name: Run benchmark tests
+        run: make test-benchmark
+        env:
+          LATTE_BIN: ${{ github.workspace }}/target/release/latte
+          SCYLLA_CONTACT_POINTS: 127.0.0.1:9042
+          BENCHMARK_DURATION: 5s

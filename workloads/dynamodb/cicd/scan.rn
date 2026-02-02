@@ -1,0 +1,161 @@
+// CI/CD Integration Test: Scan Operations
+//
+// Tests: scan, scan with filter, parallel scan (segments)
+// Duration: ~10 seconds
+//
+// Usage:
+//   latte schema  --dynamodb --dynamodb-endpoint http://localhost:8000 workloads/dynamodb/cicd/scan.rn
+//   latte load    --dynamodb --dynamodb-endpoint http://localhost:8000 workloads/dynamodb/cicd/scan.rn
+//   latte run -d 10s --dynamodb --dynamodb-endpoint http://localhost:8000 workloads/dynamodb/cicd/scan.rn
+
+const TABLE_NAME = "latte_cicd_scan";
+const ITEM_COUNT = latte::param!("items", 1000);
+const TOTAL_SEGMENTS = latte::param!("segments", 4);
+
+pub async fn schema(ctx) {
+    // Clean up existing table (ignore errors if doesn't exist)
+    let _ = ctx.delete_table(TABLE_NAME).await;
+
+    ctx.create_table(
+        TABLE_NAME,
+        [dynamodb::dynamo_key_schema("pk", "HASH")],
+        [dynamodb::dynamo_attribute_def("pk", "S")],
+        Some(dynamodb::dynamo_throughput(100, 100)),
+    ).await?;
+
+    ctx.wait_table_active(TABLE_NAME).await?;
+    Ok(())
+}
+
+pub async fn prepare(ctx) {
+    ctx.load_cycle_count = ITEM_COUNT;
+    Ok(())
+}
+
+pub async fn erase(ctx) {
+    schema(ctx).await?;
+    Ok(())
+}
+
+pub async fn load(ctx, i) {
+    let pk = format!("scan_item_{:08}", i);
+
+    // Create items with various categories for filtering
+    let category = ["alpha", "beta", "gamma", "delta"][i % 4];
+    let status = if i % 3 == 0 { "active" } else { "inactive" };
+
+    let item = #{
+        "pk": dynamodb::dynamo_s(pk),
+        "category": dynamodb::dynamo_s(category),
+        "status": dynamodb::dynamo_s(status),
+        "value": dynamodb::dynamo_n(i),
+        "score": dynamodb::dynamo_n(i % 100),
+    };
+
+    ctx.put_item(TABLE_NAME, item, None).await?;
+    Ok(())
+}
+
+pub async fn run(ctx, i) {
+    let op = latte::hash_range(i, 100);
+
+    if op < 30 {
+        // 30% - Simple scan with limit
+        let items = ctx.scan(
+            TABLE_NAME,
+            Some(#{
+                "projection_expression": "pk, category, #v",
+                "expression_attribute_names": #{ "#v": "value" },
+                "limit": 50,
+            }),
+        ).await?;
+
+        // Verify: scan should return items (table has data)
+        assert!(!items.is_empty(), "Scan should return items");
+
+        // Verify: each item has expected projected fields
+        for item in items {
+            assert!(item.contains_key("pk"), "Item should have pk field");
+            assert!(item.contains_key("category"), "Item should have category field");
+            assert!(item.contains_key("value"), "Item should have value field");
+            // Verify pk format
+            let pk = item["pk"];
+            assert!(pk.starts_with("scan_item_"), "pk should start with scan_item_");
+        }
+
+    } else if op < 60 {
+        // 30% - Scan with filter expression
+        let categories = ["alpha", "beta", "gamma", "delta"];
+        let target_category = categories[i % 4];
+
+        let items = ctx.scan(
+            TABLE_NAME,
+            Some(#{
+                "filter_expression": "category = :cat AND #s = :status",
+                "expression_attribute_names": #{ "#s": "status" },
+                "expression_attribute_values": #{
+                    ":cat": dynamodb::dynamo_s(target_category),
+                    ":status": dynamodb::dynamo_s("active"),
+                },
+                "limit": 20,
+            }),
+        ).await?;
+
+        // Verify: filtered items match the filter criteria
+        for item in items {
+            assert!(item.contains_key("category"), "Item should have category field");
+            assert!(item.contains_key("status"), "Item should have status field");
+            let cat = item["category"];
+            let status = item["status"];
+            assert_eq!(cat, target_category, "Category should match filter");
+            assert_eq!(status, "active", "Status should be active");
+        }
+
+    } else if op < 80 {
+        // 20% - Scan with numeric filter
+        let min_score = latte::hash_range(i, 50);
+
+        let items = ctx.scan(
+            TABLE_NAME,
+            Some(#{
+                "filter_expression": "score >= :min",
+                "projection_expression": "pk, score",
+                "expression_attribute_values": #{ ":min": dynamodb::dynamo_n(min_score) },
+                "limit": 30,
+            }),
+        ).await?;
+
+        // Verify: filtered items have score >= min_score
+        for item in items {
+            assert!(item.contains_key("pk"), "Item should have pk field");
+            assert!(item.contains_key("score"), "Item should have score field");
+            let item_score = item["score"];
+            assert!(item_score >= min_score, "Score should be >= min_score");
+        }
+
+    } else {
+        // 20% - Parallel scan (single segment)
+        let segment = i % TOTAL_SEGMENTS;
+
+        let items = ctx.scan(
+            TABLE_NAME,
+            Some(#{
+                "projection_expression": "pk, #v",
+                "expression_attribute_names": #{ "#v": "value" },
+                "limit": 25,
+                "segment": segment,
+                "total_segments": TOTAL_SEGMENTS,
+            }),
+        ).await?;
+
+        // Verify: parallel scan returns items with expected fields
+        for item in items {
+            assert!(item.contains_key("pk"), "Item should have pk field");
+            assert!(item.contains_key("value"), "Item should have value field");
+            let pk = item["pk"];
+            assert!(pk.starts_with("scan_item_"), "pk should start with scan_item_");
+        }
+    }
+
+    Ok(())
+}

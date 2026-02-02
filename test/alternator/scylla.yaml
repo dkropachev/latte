@@ -1,0 +1,54 @@
+# ScyllaDB configuration for Alternator integration tests
+# Based on alternator-client-golang test configuration
+
+# Basic cluster settings
+cluster_name: 'latte-alternator-test'
+num_tokens: 256
+
+# Commit log configuration
+commitlog_sync: periodic
+commitlog_sync_period_in_ms: 10000
+commitlog_segment_size_in_mb: 32
+schema_commitlog_segment_size_in_mb: 128
+
+# Seed provider
+seed_provider:
+    - class_name: org.apache.cassandra.locator.SimpleSeedProvider
+      parameters:
+          - seeds: "127.0.0.1"
+
+# Network settings - will be overridden by command line
+listen_address: localhost
+rpc_address: localhost
+native_transport_port: 9042
+native_shard_aware_transport_port: 19042
+
+# Timeouts
+read_request_timeout_in_ms: 5000
+write_request_timeout_in_ms: 2000
+cas_contention_timeout_in_ms: 1000
+
+# Snitch
+endpoint_snitch: SimpleSnitch
+
+# Partitioner
+partitioner: org.apache.cassandra.dht.Murmur3Partitioner
+murmur3_partitioner_ignore_msb_bits: 12
+
+# API settings
+api_port: 10000
+api_address: 127.0.0.1
+
+# Enable tablets
+enable_tablets: true
+
+# Alternator (DynamoDB-compatible API) configuration
+# HTTP port (unencrypted)
+alternator_port: 8000
+
+# Write isolation policy:
+# - always: Always use LWT for writes (safest, slowest)
+# - forbid_rmw: Never use LWT, forbid read-modify-write operations
+# - only_rmw_uses_lwt: Use LWT only for read-modify-write operations (recommended)
+# - unsafe_rmw: Never use LWT, allow unsafe read-modify-write
+alternator_write_isolation: only_rmw_uses_lwt

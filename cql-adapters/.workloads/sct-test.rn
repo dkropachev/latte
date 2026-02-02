@@ -1,0 +1,178 @@
+use std::future;
+
+use latte::*;
+
+// NOTE: 'latte schema' and 'latte run' params
+const KEYSPACE = latte::param!("keyspace", "custom_d3_w1");
+
+// NOTE: 'latte schema' params
+const RECREATE_KEYSPACE = latte::param!("recreate_keyspace", false);
+const TABLETS = latte::param!("tablets", true);
+const REPLICATION_FACTOR = latte::param!("replication_factor", 2);
+const COMPACTION_STRATEGY = latte::param!("compaction_strategy", "IncrementalCompactionStrategy");
+const TOMBSTONE_GC_MODE = latte::param!("tombstone_gc_mode", "repair");
+
+// NOTE: 'latte run' params
+const ROW_COUNT = latte::param!("row_count", 1000000);
+const OFFSET = latte::param!("offset", 0);
+const ROWS_PER_PARTITION = latte::param!("rows_per_partition", 1);
+// NOTE: 'partition_sizes' defines set of 'percent:multiplier' pairs to create multi-row partitions
+// of different sizes. Example: '95:1,4:2,1:4'
+const PARTITION_SIZES = latte::param!("partition_sizes", "50:1,50:2");
+const BLOB_COL_SIZE = latte::param!("blob_col_size", 113);
+const GAUSS_MEAN = latte::param!("gauss_mean", 0);
+const GAUSS_STDDEV = latte::param!("gauss_stddev", 0);
+const BYPASS_CACHE = latte::param!("bypass_cache", false);
+
+const TABLES = #{
+    "TABLE1": "table1",
+};
+const P_STMT = #{
+    "TABLE1": #{
+        "INSERT": "p_stmt_table1__insert",
+        "GET": "p_stmt_table1__get",
+        "GET_BYPASS_CACHE": "p_stmt_table1__get_bypass_cache",
+    },
+};
+
+pub async fn schema(db) {
+    if RECREATE_KEYSPACE {
+        println!(
+            "rune-info: Recreating '{keyspace}' keyspace",
+            keyspace=KEYSPACE,
+        );
+        db.execute(`DROP KEYSPACE ${KEYSPACE}`).await?;
+    }
+    db.execute(`
+        CREATE KEYSPACE IF NOT EXISTS ${KEYSPACE} WITH REPLICATION = {
+            'class': 'NetworkTopologyStrategy',
+            'replication_factor': ${REPLICATION_FACTOR}
+        }
+        AND durable_writes = true
+        AND tablets = {'enabled': ${TABLETS}};
+    `).await?;
+
+    // Create DB tables
+    db.execute(`
+        CREATE TABLE IF NOT EXISTS ${KEYSPACE}.${TABLES.TABLE1} (
+            pk text,
+            ck text,
+            data0 blob,
+            data1 blob,
+            data2 blob,
+            PRIMARY KEY ((pk, ck))
+        ) WITH bloom_filter_fp_chance = 0.01
+            AND comment = 'Created by latte'
+            AND caching = {'keys': 'ALL', 'rows_per_partition': 'ALL'}
+            AND compaction = {'class': '${COMPACTION_STRATEGY}'}
+            AND compression = {'sstable_compression': 'org.apache.cassandra.io.compress.LZ4Compressor'}
+            AND crc_check_chance = 1
+            AND default_time_to_live = 604800
+            AND gc_grace_seconds = 864000
+            AND max_index_interval = 2048
+            AND memtable_flush_period_in_ms = 0
+            AND min_index_interval = 128
+            AND speculative_retry = '99.0PERCENTILE';
+    `).await?;
+
+    if !TOMBSTONE_GC_MODE.is_empty() {
+        println!("rune-info: Setting 'tombstone_gc={t_gc_mode}' for all tables", t_gc_mode=TOMBSTONE_GC_MODE);
+        for table_name in TABLES.values() {
+            db.execute(`
+                ALTER TABLE ${KEYSPACE}.${table_name}
+                WITH tombstone_gc = {'mode':'${TOMBSTONE_GC_MODE}'}
+            `).await?;
+        }
+    }
+}
+
+pub async fn erase(db) {
+    let errors = []; let futures = [];
+    for table_name in TABLES.values() {
+        futures.push(db.execute(`TRUNCATE TABLE ${KEYSPACE}.${table_name}`));
+    }
+    for result in future::join(futures).await { match result { Err(e) => errors.push(e) } }
+    if errors.len() < 1 { return Ok(()) }
+    Err(`Failed to execute 'erase' queries: ${errors.0}`)
+}
+
+pub async fn prepare(db) {
+    db.init_partition_row_distribution_preset("main", ROW_COUNT, ROWS_PER_PARTITION, PARTITION_SIZES).await?;
+    println!("debug: Keyspace: {keyspace}", keyspace=KEYSPACE);
+    db.prepare(P_STMT.TABLE1.INSERT,
+        `INSERT INTO ${KEYSPACE}.${TABLES.TABLE1}(pk, ck, data0, data1)` +
+        " VALUES (:pk, :ck, :data0, :data1)").await?;
+    db.prepare(P_STMT.TABLE1.GET,
+        `SELECT data0, data1, data2 FROM ${KEYSPACE}.${TABLES.TABLE1}` +
+        " WHERE pk = :pk AND ck = :ck").await?;
+    db.prepare(P_STMT.TABLE1.GET_BYPASS_CACHE,
+        `SELECT data0, data1, data2 FROM ${KEYSPACE}.${TABLES.TABLE1}` +
+        " WHERE pk = :pk AND ck = :ck BYPASS CACHE").await?;
+    prepare_gauss_distribution(db).await;
+}
+
+/// Utility function that enables and validates the gauss/normal distribution
+async fn prepare_gauss_distribution(db) {
+    if GAUSS_MEAN > 0 && GAUSS_STDDEV > 0 {
+        db.data.gauss_mean = GAUSS_MEAN as f64;
+        db.data.gauss_stddev = GAUSS_STDDEV as f64;
+        db.data.gauss_enabled = true;
+        println!(
+            "debug: Gauss/normal distribution is enabled: mean='{mean}', stddev='{stddev}'",
+            mean=db.data.gauss_mean, stddev=db.data.gauss_stddev);
+    } else if GAUSS_MEAN == 0 && GAUSS_STDDEV == 0 {
+        db.data.gauss_enabled = false;
+        println!("debug: Gauss/normal distribution is disabled");
+    } else {
+        Err(format!(
+            "'gauss_mean' and 'gauss_stddev' both must be either '0' (disabled) " +
+            "or in range of '{min}..{max}' (offset..(offset+row_count))",
+            min=OFFSET, max=OFFSET+ROW_COUNT))
+    }
+}
+
+/// Utility function which generates partition index based on the cycle id and distribution type
+async fn get_idx(db, i) {
+    if db.data.gauss_enabled {
+        let current_idx = normal(i, db.data.gauss_mean, db.data.gauss_stddev) as i64;
+        if current_idx > OFFSET + ROW_COUNT {
+            current_idx = OFFSET + ROW_COUNT - 1;
+        } else if current_idx < OFFSET {
+            current_idx = OFFSET;
+        }
+        return current_idx;
+    } else {
+        return i % ROW_COUNT + OFFSET;
+    }
+}
+
+//////////////////////////////////
+// SPECIFIC PER-TABLE FUNCTIONS //
+//////////////////////////////////
+
+// TABLE1 | INSERT INTO <t1> (pk, ck, data0, data1) VALUES (?, ?, ?)
+pub async fn t1__insert(db, i) {
+    let idx = get_idx(db, i).await;
+    let partition_idx = db.get_partition_idx("main", idx).await;
+
+    let idx_hash = hash(idx);
+
+    let pk = text(partition_idx, 36);
+    let ck = text(partition_idx + idx_hash, 36);
+    let data0 = blob(idx, BLOB_COL_SIZE);
+    let data1 = blob(idx + idx_hash, BLOB_COL_SIZE);
+    db.execute_prepared(P_STMT.TABLE1.INSERT, [pk, ck, data0, data1]).await?
+}
+
+// TABLE1 | SELECT data0, data1, data2 FROM <t1> WHERE pk = '?' AND ck = '?'
+pub async fn t1__get(db, i) {
+    let idx = get_idx(db, i).await;
+    let partition_idx = db.get_partition_idx("main", idx).await;
+
+    let idx_hash = hash(idx);
+
+    let pk = text(partition_idx, 36);
+    let ck = text(partition_idx + idx_hash, 36);
+    let p_stmt = if BYPASS_CACHE { P_STMT.TABLE1.GET_BYPASS_CACHE } else { P_STMT.TABLE1.GET };
+    db.execute_prepared(p_stmt, [pk, ck]).await?
+}

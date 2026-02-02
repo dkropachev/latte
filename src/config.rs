@@ -9,8 +9,9 @@ use std::time::Duration;
 use anyhow::anyhow;
 use chrono::Utc;
 use clap::builder::PossibleValue;
-use clap::{Parser, ValueEnum};
+use clap::{Args, Parser, ValueEnum};
 use itertools::Itertools;
+use rune::Any;
 use serde::{Deserialize, Serialize};
 
 /// Limit of retry errors to be kept and then printed in scope of a sampling interval
@@ -258,6 +259,285 @@ pub enum ValidationStrategy {
     Ignore, // Ignore validation errors - face, print, go on.
 }
 
+/// Compression algorithm for DynamoDB requests/responses.
+#[derive(Clone, Copy, Default, Debug, Eq, PartialEq, Serialize, Deserialize, ValueEnum, Any)]
+#[rune(item = ::dynamodb)]
+pub enum DynamoDbCompression {
+    /// No compression (default)
+    #[default]
+    #[rune(constructor)]
+    None,
+    /// Gzip compression
+    #[rune(constructor)]
+    Gzip,
+}
+
+impl std::fmt::Display for DynamoDbCompression {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::None => write!(f, "none"),
+            Self::Gzip => write!(f, "gzip"),
+        }
+    }
+}
+
+/// Configuration for request body compression (data sent to server).
+#[derive(Args, Debug, Clone, Serialize, Deserialize)]
+pub struct RequestCompressionConf {
+    /// Request body compression algorithm (Content-Encoding).
+    ///
+    /// When enabled, request bodies larger than the minimum size will be compressed
+    /// before sending to the server. Disabled by default.
+    #[clap(
+        id = "request_compression_algorithm",
+        long("dynamodb-request-compression"),
+        default_value = "none",
+        value_name = "ALGORITHM"
+    )]
+    pub algorithm: DynamoDbCompression,
+
+    /// Minimum request body size in bytes to trigger compression.
+    ///
+    /// Request bodies smaller than this size will not be compressed.
+    /// Only applies when request compression is enabled.
+    #[clap(
+        id = "request_compression_min_size",
+        long("dynamodb-request-compression-min-size"),
+        default_value = "1024",
+        value_name = "BYTES"
+    )]
+    pub min_size: usize,
+}
+
+impl Default for RequestCompressionConf {
+    fn default() -> Self {
+        Self {
+            algorithm: DynamoDbCompression::None,
+            min_size: 1024,
+        }
+    }
+}
+
+impl RequestCompressionConf {
+    /// Returns true if request compression is enabled.
+    pub fn is_enabled(&self) -> bool {
+        self.algorithm != DynamoDbCompression::None
+    }
+}
+
+/// Configuration for response compression (data received from server).
+#[derive(Args, Debug, Clone, Serialize, Deserialize)]
+pub struct ResponseCompressionConf {
+    /// Enable response decompression (Accept-Encoding header).
+    ///
+    /// When enabled, the client will send Accept-Encoding header and
+    /// automatically decompress responses from the server.
+    /// Disabled by default.
+    #[clap(id = "accept_compression_enabled", long("dynamodb-accept-compression"), action = clap::ArgAction::SetTrue)]
+    pub accept_compression_enabled: bool,
+
+    /// Accepted compression algorithm for responses.
+    ///
+    /// Specifies which compression algorithm to accept in the Accept-Encoding header.
+    /// Only applies when response compression is enabled.
+    #[clap(
+        id = "response_compression_algorithm",
+        long("dynamodb-accept-compression-algorithm"),
+        default_value_t = DynamoDbCompression::Gzip,
+        value_name = "ALGORITHM"
+    )]
+    pub algorithm: DynamoDbCompression,
+}
+
+impl Default for ResponseCompressionConf {
+    fn default() -> Self {
+        Self {
+            accept_compression_enabled: false,
+            algorithm: DynamoDbCompression::Gzip,
+        }
+    }
+}
+
+impl ResponseCompressionConf {
+    /// Returns true if response compression is enabled.
+    pub fn is_enabled(&self) -> bool {
+        self.accept_compression_enabled && self.algorithm != DynamoDbCompression::None
+    }
+
+    /// Returns the Accept-Encoding header value if enabled.
+    pub fn accept_encoding(&self) -> Option<&'static str> {
+        if !self.accept_compression_enabled {
+            return None;
+        }
+        match self.algorithm {
+            DynamoDbCompression::None => None,
+            DynamoDbCompression::Gzip => Some("gzip"),
+        }
+    }
+}
+
+/// Combined compression configuration for requests and responses.
+#[derive(Args, Debug, Clone, Serialize, Deserialize, Default)]
+pub struct CompressionConf {
+    /// Request compression settings (outgoing data).
+    #[clap(flatten)]
+    pub request: RequestCompressionConf,
+
+    /// Response compression settings (incoming data).
+    #[clap(flatten)]
+    pub response: ResponseCompressionConf,
+}
+
+/// Configuration for DynamoDB/Alternator mode.
+#[derive(Args, Debug, Clone, Serialize, Deserialize, Default)]
+pub struct DynamoDbConf {
+    /// Enable DynamoDB mode instead of CQL mode.
+    #[clap(long("dynamodb"), action = clap::ArgAction::SetTrue)]
+    pub enabled: bool,
+
+    /// DynamoDB/Alternator endpoint URL.
+    ///
+    /// Required for Alternator, optional for AWS DynamoDB.
+    /// Example: http://localhost:8000
+    #[clap(
+        long("dynamodb-endpoint"),
+        env("DYNAMODB_ENDPOINT"),
+        value_name = "URL"
+    )]
+    pub endpoint: Option<String>,
+
+    /// AWS region for DynamoDB.
+    #[clap(
+        long("dynamodb-region"),
+        env("AWS_REGION"),
+        default_value = "us-east-1",
+        value_name = "REGION"
+    )]
+    pub region: String,
+
+    /// AWS access key ID.
+    #[clap(
+        long("aws-access-key-id"),
+        env("AWS_ACCESS_KEY_ID"),
+        value_name = "KEY"
+    )]
+    pub access_key_id: Option<String>,
+
+    /// AWS secret access key.
+    #[clap(
+        long("aws-secret-access-key"),
+        env("AWS_SECRET_ACCESS_KEY"),
+        value_name = "SECRET"
+    )]
+    pub secret_access_key: Option<String>,
+
+    /// Maximum number of connections per client.
+    #[clap(
+        long("dynamodb-max-connections"),
+        default_value = "100",
+        value_name = "COUNT"
+    )]
+    pub max_connections: usize,
+
+    /// Connection timeout in milliseconds.
+    #[clap(
+        long("dynamodb-connect-timeout"),
+        default_value = "5000",
+        value_name = "MS"
+    )]
+    pub connect_timeout_ms: u64,
+
+    /// Read timeout in milliseconds.
+    #[clap(
+        long("dynamodb-read-timeout"),
+        default_value = "30000",
+        value_name = "MS"
+    )]
+    pub read_timeout_ms: u64,
+
+    /// Maximum retry attempts.
+    #[clap(
+        long("dynamodb-max-retries"),
+        default_value = "3",
+        value_name = "COUNT"
+    )]
+    pub max_retries: u32,
+
+    /// Request body compression settings.
+    #[clap(flatten)]
+    pub compression: CompressionConf,
+
+    /// Path to the Unix domain socket for Alternator driver communication.
+    ///
+    /// When specified, Latte delegates DynamoDB operations to an external
+    /// Alternator adapter via this socket instead of using the AWS SDK directly.
+    #[clap(long("alternator-driver-socket"), value_name = "PATH")]
+    pub alternator_driver_socket: Option<PathBuf>,
+
+    /// Docker image for the Alternator driver adapter.
+    ///
+    /// When specified, Latte starts a Docker container with this image and
+    /// delegates DynamoDB operations to it via Unix domain socket.
+    #[clap(long("alternator-adapter-image"), value_name = "IMAGE")]
+    pub alternator_adapter_image: Option<String>,
+}
+
+const DEFAULT_ALTERNATOR_SOCKET_PATH: &str = "/tmp/latte-alternator.sock";
+
+impl DynamoDbConf {
+    /// Returns true if DynamoDB mode is enabled.
+    pub fn is_enabled(&self) -> bool {
+        self.enabled
+    }
+
+    /// Returns true if external Alternator driver mode is enabled.
+    pub fn is_external_driver(&self) -> bool {
+        self.alternator_driver_socket.is_some() || self.alternator_adapter_image.is_some()
+    }
+
+    /// Returns the socket path for the Alternator driver IPC.
+    /// Uses the explicit socket path if set, otherwise defaults to a standard path.
+    pub fn alternator_socket_path(&self) -> PathBuf {
+        self.alternator_driver_socket
+            .clone()
+            .unwrap_or_else(|| PathBuf::from(DEFAULT_ALTERNATOR_SOCKET_PATH))
+    }
+}
+
+/// Configuration for the external driver mode (universal loader).
+#[derive(Args, Debug, Clone, Serialize, Deserialize, Default)]
+pub struct DriverConf {
+    /// Docker image for the driver adapter.
+    ///
+    /// When specified, Latte starts a Docker container with this image and
+    /// delegates query execution to it via Unix domain socket.
+    #[clap(long("cql-adapter-image"), value_name = "IMAGE")]
+    pub cql_adapter_image: Option<String>,
+
+    /// Path to the Unix domain socket for driver communication.
+    ///
+    /// Without --cql-adapter-image: connects to an existing driver at this socket.
+    /// With --cql-adapter-image: specifies where the driver should create its socket.
+    #[clap(long("driver-socket"), value_name = "PATH")]
+    pub driver_socket: Option<PathBuf>,
+}
+
+const DEFAULT_SOCKET_PATH: &str = "/tmp/latte-driver.sock";
+
+impl DriverConf {
+    /// Returns true if external driver mode should be used.
+    pub fn is_external(&self) -> bool {
+        self.cql_adapter_image.is_some() || self.driver_socket.is_some()
+    }
+
+    /// Returns the socket path to use for IPC.
+    pub fn socket_path(&self) -> PathBuf {
+        self.driver_socket
+            .clone()
+            .unwrap_or_else(|| PathBuf::from(DEFAULT_SOCKET_PATH))
+    }
+}
+
 #[derive(Clone, Copy, Default, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum Consistency {
     Any,
@@ -471,6 +751,14 @@ pub struct SchemaCommand {
     // Cassandra connection settings.
     #[clap(flatten)]
     pub connection: ConnectionConf,
+
+    // External driver settings for universal loader.
+    #[clap(flatten)]
+    pub driver: DriverConf,
+
+    // DynamoDB/Alternator settings.
+    #[clap(flatten)]
+    pub dynamodb: DynamoDbConf,
 }
 
 #[derive(Parser, Debug, Serialize, Deserialize)]
@@ -502,6 +790,14 @@ pub struct LoadCommand {
     // Cassandra connection settings.
     #[clap(flatten)]
     pub connection: ConnectionConf,
+
+    // External driver settings for universal loader.
+    #[clap(flatten)]
+    pub driver: DriverConf,
+
+    // DynamoDB/Alternator settings.
+    #[clap(flatten)]
+    pub dynamodb: DynamoDbConf,
 }
 
 #[derive(Parser, Debug, Serialize, Deserialize)]
@@ -624,6 +920,14 @@ pub struct RunCommand {
     // Cassandra connection settings.
     #[clap(flatten)]
     pub connection: ConnectionConf,
+
+    // External driver settings for universal loader.
+    #[clap(flatten)]
+    pub driver: DriverConf,
+
+    // DynamoDB/Alternator settings.
+    #[clap(flatten)]
+    pub dynamodb: DynamoDbConf,
 
     /// Seconds since 1970-01-01T00:00:00Z
     #[clap(hide = true, long)]

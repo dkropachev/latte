@@ -1,0 +1,272 @@
+//! DynamoDB Nested Collection Data Types Integration Test Workload.
+//!
+//! Tests deeply nested DynamoDB structures: list of maps, map of lists,
+//! nested maps, nested lists, and complex document structures.
+//!
+//! USAGE:
+//!   latte schema  --dynamodb --dynamodb-endpoint http://localhost:8000 workloads/dynamodb/cicd/nested-collections.rn
+//!   latte load    --dynamodb --dynamodb-endpoint http://localhost:8000 -P items=1000 workloads/dynamodb/cicd/nested-collections.rn
+//!   latte run -d 10s --dynamodb --dynamodb-endpoint http://localhost:8000 -P items=1000 workloads/dynamodb/cicd/nested-collections.rn
+
+// ============================================================================
+// Configuration
+// ============================================================================
+
+const TABLE_NAME = "latte_cicd_nested";
+const ITEM_COUNT = latte::param!("items", 10000);
+
+// ============================================================================
+// Schema
+// ============================================================================
+
+pub async fn schema(ctx) {
+    // Clean up existing table (ignore errors if doesn't exist)
+    let _ = ctx.delete_table(TABLE_NAME).await;
+
+    ctx.create_table(
+        TABLE_NAME,
+        [dynamodb::dynamo_key_schema("pk", "HASH")],
+        [dynamodb::dynamo_attribute_def("pk", "S")],
+        Some(dynamodb::dynamo_throughput(100, 100)),
+    ).await?;
+
+    ctx.wait_table_active(TABLE_NAME).await?;
+    Ok(())
+}
+
+pub async fn prepare(ctx) {
+    ctx.load_cycle_count = ITEM_COUNT;
+    Ok(())
+}
+
+pub async fn erase(ctx) {
+    schema(ctx).await?;
+    Ok(())
+}
+
+// ============================================================================
+// Helper Functions
+// ============================================================================
+
+// Build list of maps (like array of objects in JSON)
+fn build_list_of_maps(idx) {
+    dynamodb::dynamo_l([
+        dynamodb::dynamo_m(#{
+            "item_name": dynamodb::dynamo_s(format!("item_{}_{}", idx, 0)),
+            "item_value": dynamodb::dynamo_n(idx * 100),
+            "active": dynamodb::dynamo_bool(true),
+        }),
+        dynamodb::dynamo_m(#{
+            "item_name": dynamodb::dynamo_s(format!("item_{}_{}", idx, 1)),
+            "item_value": dynamodb::dynamo_n(idx * 100 + 1),
+            "active": dynamodb::dynamo_bool(false),
+        }),
+        dynamodb::dynamo_m(#{
+            "item_name": dynamodb::dynamo_s(format!("item_{}_{}", idx, 2)),
+            "item_value": dynamodb::dynamo_n(idx * 100 + 2),
+            "active": dynamodb::dynamo_bool(idx % 2 == 0),
+        }),
+    ])
+}
+
+// Build map of lists (like object with array values in JSON)
+fn build_map_of_lists(idx) {
+    dynamodb::dynamo_m(#{
+        "tags": dynamodb::dynamo_l([
+            dynamodb::dynamo_s(format!("tag_{}", idx % 10)),
+            dynamodb::dynamo_s(format!("tag_{}", (idx + 1) % 10)),
+        ]),
+        "scores": dynamodb::dynamo_l([
+            dynamodb::dynamo_n(idx % 100),
+            dynamodb::dynamo_n((idx + 10) % 100),
+            dynamodb::dynamo_n((idx + 20) % 100),
+        ]),
+        "flags": dynamodb::dynamo_l([
+            dynamodb::dynamo_bool(true),
+            dynamodb::dynamo_bool(false),
+            dynamodb::dynamo_bool(idx % 2 == 0),
+        ]),
+    })
+}
+
+// Build deeply nested map (3 levels deep)
+fn build_nested_map(idx) {
+    dynamodb::dynamo_m(#{
+        "config": dynamodb::dynamo_m(#{
+            "settings": dynamodb::dynamo_m(#{
+                "enabled": dynamodb::dynamo_bool(true),
+                "threshold": dynamodb::dynamo_n(idx % 1000),
+                "mode": dynamodb::dynamo_s(if idx % 2 == 0 { "auto" } else { "manual" }),
+            }),
+            "metadata": dynamodb::dynamo_m(#{
+                "created_by": dynamodb::dynamo_s(format!("user_{}", idx % 100)),
+                "version": dynamodb::dynamo_n(idx % 10),
+            }),
+        }),
+        "info": dynamodb::dynamo_m(#{
+            "description": dynamodb::dynamo_s(format!("Item {} configuration", idx)),
+            "priority": dynamodb::dynamo_n(idx % 5),
+        }),
+    })
+}
+
+// Build nested list (list of lists)
+fn build_nested_list(idx) {
+    dynamodb::dynamo_l([
+        dynamodb::dynamo_l([
+            dynamodb::dynamo_n(idx),
+            dynamodb::dynamo_n(idx + 1),
+            dynamodb::dynamo_n(idx + 2),
+        ]),
+        dynamodb::dynamo_l([
+            dynamodb::dynamo_n(idx + 10),
+            dynamodb::dynamo_n(idx + 11),
+            dynamodb::dynamo_n(idx + 12),
+        ]),
+        dynamodb::dynamo_l([
+            dynamodb::dynamo_n(idx + 100),
+            dynamodb::dynamo_n(idx + 101),
+            dynamodb::dynamo_n(idx + 102),
+        ]),
+    ])
+}
+
+// Build complex document structure (simulates real-world JSON document)
+fn build_document(idx) {
+    dynamodb::dynamo_m(#{
+        "user_id": dynamodb::dynamo_s(format!("user_{:08}", idx)),
+        "profile": dynamodb::dynamo_m(#{
+            "display_name": dynamodb::dynamo_s(format!("User {}", idx)),
+            "email": dynamodb::dynamo_s(format!("user{}@example.com", idx)),
+            "age": dynamodb::dynamo_n(20 + (idx % 50)),
+            "verified": dynamodb::dynamo_bool(idx % 3 == 0),
+        }),
+        "addresses": dynamodb::dynamo_l([
+            dynamodb::dynamo_m(#{
+                "addr_type": dynamodb::dynamo_s("home"),
+                "street": dynamodb::dynamo_s(format!("{} Main St", idx % 1000)),
+                "city": dynamodb::dynamo_s("Boston"),
+                "zip": dynamodb::dynamo_s(format!("{:05}", 10000 + (idx % 90000))),
+            }),
+            dynamodb::dynamo_m(#{
+                "addr_type": dynamodb::dynamo_s("work"),
+                "street": dynamodb::dynamo_s(format!("{} Business Ave", idx % 500)),
+                "city": dynamodb::dynamo_s("Cambridge"),
+                "zip": dynamodb::dynamo_s(format!("{:05}", 20000 + (idx % 80000))),
+            }),
+        ]),
+        "preferences": dynamodb::dynamo_m(#{
+            "notifications": dynamodb::dynamo_m(#{
+                "email_enabled": dynamodb::dynamo_bool(true),
+                "sms_enabled": dynamodb::dynamo_bool(idx % 2 == 0),
+                "push_enabled": dynamodb::dynamo_bool(idx % 3 == 0),
+            }),
+            "theme": dynamodb::dynamo_s(if idx % 2 == 0 { "dark" } else { "light" }),
+            "language": dynamodb::dynamo_s("en"),
+        }),
+        "tags": dynamodb::dynamo_l([
+            dynamodb::dynamo_s(format!("cat_{}", idx % 5)),
+            dynamodb::dynamo_s(format!("region_{}", idx % 10)),
+        ]),
+    })
+}
+
+// ============================================================================
+// Load
+// ============================================================================
+
+pub async fn load(ctx, i) {
+    let idx = i % ITEM_COUNT;
+    let pk = format!("nested_{:08}", idx);
+
+    let item = #{
+        "pk": dynamodb::dynamo_s(pk),
+    };
+
+    // Add list of maps
+    if idx % 17 != 0 {
+        item["list_of_maps"] = build_list_of_maps(idx);
+    }
+
+    // Add map of lists
+    if idx % 19 != 0 {
+        item["map_of_lists"] = build_map_of_lists(idx);
+    }
+
+    // Add deeply nested map
+    if idx % 23 != 0 {
+        item["nested_map"] = build_nested_map(idx);
+    }
+
+    // Add nested list
+    if idx % 29 != 0 {
+        item["nested_list"] = build_nested_list(idx);
+    }
+
+    // Add complex document
+    if idx % 31 != 0 {
+        item["document"] = build_document(idx);
+    }
+
+    ctx.put_item(TABLE_NAME, item, None).await?;
+    Ok(())
+}
+
+// ============================================================================
+// Run
+// ============================================================================
+
+pub async fn run(ctx, i) {
+    let op = latte::hash_range(i, 100);
+    let idx = latte::hash_range(i, ITEM_COUNT);
+    let pk = format!("nested_{:08}", idx);
+
+    if op < 50 {
+        // 50% - GetItem by primary key (read nested structures)
+        let key = #{
+            "pk": dynamodb::dynamo_s(pk),
+        };
+        let result = ctx.get_item(TABLE_NAME, key, None).await?;
+
+        // Verify we got the item
+        if result != None {
+            assert!(result.contains_key("pk"), "Item should have pk field");
+        }
+
+    } else if op < 75 {
+        // 25% - PutItem with nested structures
+        let item = #{
+            "pk": dynamodb::dynamo_s(pk),
+        };
+
+        // Add various nested structures based on idx
+        if idx % 3 == 0 {
+            item["list_of_maps"] = build_list_of_maps(idx);
+        }
+        if idx % 3 == 1 {
+            item["map_of_lists"] = build_map_of_lists(idx);
+        }
+        if idx % 3 == 2 {
+            item["document"] = build_document(idx);
+        }
+
+        ctx.put_item(TABLE_NAME, item, None).await?;
+
+    } else {
+        // 25% - Scan with projection on nested fields
+        let items = ctx.scan(
+            TABLE_NAME,
+            Some(#{
+                "projection_expression": "pk, list_of_maps, document",
+                "limit": 5,
+            }),
+        ).await?;
+
+        // Verify scan returns items with nested structures
+        for item in items {
+            assert!(item.contains_key("pk"), "Scanned item should have pk");
+        }
+    }
+
+    Ok(())
+}

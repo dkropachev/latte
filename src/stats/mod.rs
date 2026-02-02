@@ -62,6 +62,7 @@ pub fn t_test(mean1: &Mean, mean2: &Mean) -> f64 {
     }
     let n1 = mean1.n as f64;
     let n2 = mean2.n as f64;
+    // unwrap is safe: we just checked is_none() above and returned early
     let e1 = mean1.std_err.unwrap();
     let e2 = mean2.std_err.unwrap();
     let m1 = mean1.value;
@@ -120,6 +121,9 @@ pub struct Sample {
     pub cycle_latency: LatencyDistribution,
     pub cycle_latency_by_fn: HashMap<String, LatencyDistribution>,
     pub request_latency: LatencyDistribution,
+    /// Driver-side latency (only populated in IPC/driver mode).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub driver_latency: Option<LatencyDistribution>,
 }
 
 impl Sample {
@@ -138,6 +142,7 @@ impl Sample {
         let mut duration_s = 0.0;
 
         let mut request_latency = LatencyDistributionRecorder::default();
+        let mut driver_latency = LatencyDistributionRecorder::default();
         let mut cycle_latency = LatencyDistributionRecorder::default();
         let mut cycle_latency_per_fn = HashMap::<String, LatencyDistributionRecorder>::new();
 
@@ -154,6 +159,7 @@ impl Sample {
             mean_queue_len += ss.mean_queue_length / stats.len() as f32;
             duration_s += (s.end_time - s.start_time).as_secs_f32() / stats.len() as f32;
             request_latency.add(&ss.resp_times_ns);
+            driver_latency.add(&ss.driver_resp_times_ns);
 
             for fs in &s.function_stats {
                 cycle_count += fs.call_count;
@@ -165,6 +171,13 @@ impl Sample {
                     .add(&fs.call_latency);
             }
         }
+
+        // Only include driver latency if we have samples
+        let driver_latency_opt = if driver_latency.count() > 0 {
+            Some(driver_latency.distribution())
+        } else {
+            None
+        };
 
         Sample {
             time_s: (stats[0].start_time - base_start_time).as_secs_f32(),
@@ -190,6 +203,7 @@ impl Sample {
                 .collect(),
 
             request_latency: request_latency.distribution(),
+            driver_latency: driver_latency_opt,
         }
     }
 }
@@ -218,6 +232,9 @@ pub struct BenchmarkStats {
     pub row_throughput: Mean,
     pub cycle_latency: LatencyDistribution,
     pub cycle_latency_by_fn: HashMap<String, LatencyDistribution>,
+    /// Driver-side latency (only populated in IPC/driver mode).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub driver_latency: Option<LatencyDistribution>,
     pub request_latency: Option<LatencyDistribution>,
     pub concurrency: Mean,
     pub concurrency_ratio: f64,
@@ -304,6 +321,8 @@ pub struct Recorder<'a> {
     pub cycle_latency: LatencyDistributionRecorder,
     pub cycle_latency_by_fn: HashMap<String, LatencyDistributionRecorder>,
     pub request_latency: LatencyDistributionRecorder,
+    /// Driver-side latency (only populated in IPC/driver mode).
+    pub driver_latency: LatencyDistributionRecorder,
     pub concurrency_meter: TimeSeriesStats,
     log: Vec<Sample>,
     rate_limit: Option<f64>,
@@ -344,6 +363,7 @@ impl Recorder<'_> {
             cycle_latency: LatencyDistributionRecorder::default(),
             cycle_latency_by_fn: HashMap::new(),
             request_latency: LatencyDistributionRecorder::default(),
+            driver_latency: LatencyDistributionRecorder::default(),
             throughput_meter: ThroughputMeter::default(),
             concurrency_meter: TimeSeriesStats::default(),
             keep_log,
@@ -364,6 +384,8 @@ impl Recorder<'_> {
         };
         for s in workload_stats.iter() {
             self.request_latency.add(&s.session_stats.resp_times_ns);
+            self.driver_latency
+                .add(&s.session_stats.driver_resp_times_ns);
             for fs in &s.function_stats {
                 self.cycle_latency.add(&fs.call_latency);
                 self.cycle_latency_by_fn
@@ -406,7 +428,8 @@ impl Recorder<'_> {
                             &fn_latencies.distribution().histogram.0,
                             interval_start_time,
                             interval_duration,
-                            interval_log::Tag::new(&format!("fn--{fn_name}")).expect("REASON"),
+                            interval_log::Tag::new(&format!("fn--{fn_name}"))
+                                .expect("Function name should produce valid HDR histogram tag"),
                         )
                         .unwrap();
                 }
@@ -442,6 +465,13 @@ impl Recorder<'_> {
             self.log.clear();
         }
 
+        // Only include driver latency if we have samples
+        let driver_latency = if self.driver_latency.count() > 0 {
+            Some(self.driver_latency.distribution_with_errors())
+        } else {
+            None
+        };
+
         BenchmarkStats {
             start_time: self.start_time.into(),
             end_time: self.end_time.into(),
@@ -475,6 +505,7 @@ impl Recorder<'_> {
             } else {
                 None
             },
+            driver_latency,
             concurrency,
             concurrency_ratio,
             log: self.log,

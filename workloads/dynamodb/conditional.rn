@@ -1,0 +1,73 @@
+// Update operations DynamoDB workload for Latte
+//
+// This workload demonstrates read and update operations.
+//
+// Usage:
+//   latte schema  --dynamodb --dynamodb-endpoint http://localhost:8000 workloads/dynamodb/conditional.rn
+//   latte load    --dynamodb --dynamodb-endpoint http://localhost:8000 workloads/dynamodb/conditional.rn
+//   latte run     --dynamodb --dynamodb-endpoint http://localhost:8000 workloads/dynamodb/conditional.rn
+
+const TABLE_NAME = "latte_update_test";
+const ITEM_COUNT = latte::param!("items", 1000);
+
+pub async fn schema(ctx) {
+    let _ = ctx.delete_table(TABLE_NAME).await;
+
+    ctx.create_table(
+        TABLE_NAME,
+        [dynamodb::dynamo_key_schema("pk", "HASH")],
+        [dynamodb::dynamo_attribute_def("pk", "S")],
+        Some(dynamodb::dynamo_throughput(100, 100)),
+    ).await?;
+
+    ctx.wait_table_active(TABLE_NAME).await?;
+    Ok(())
+}
+
+pub async fn prepare(ctx) {
+    ctx.load_cycle_count = ITEM_COUNT;
+    Ok(())
+}
+
+pub async fn erase(ctx) {
+    schema(ctx).await?;
+    Ok(())
+}
+
+pub async fn load(ctx, i) {
+    let pk = format!("pk_{:08}", i);
+    let item = #{
+        "pk": dynamodb::dynamo_s(pk),
+        "counter": dynamodb::dynamo_n(0),
+        "data": dynamodb::dynamo_s(format!("initial_{}", i)),
+    };
+    ctx.put_item(TABLE_NAME, item, None).await?;
+    Ok(())
+}
+
+pub async fn run(ctx, i) {
+    let op = latte::hash_range(i, 100);
+    let item_id = latte::hash_range(i + 1000, ITEM_COUNT);
+    let pk = format!("pk_{:08}", item_id);
+    let key = #{ "pk": dynamodb::dynamo_s(pk) };
+
+    if op < 60 {
+        // 60% - Read
+        ctx.get_item(TABLE_NAME, key, None).await?;
+    } else {
+        // 40% - Update (increment counter)
+        ctx.update_item(
+            TABLE_NAME,
+            key,
+            Some(#{
+                "update_expression": "SET #c = #c + :inc",
+                "expression_attribute_names": #{ "#c": "counter" },
+                "expression_attribute_values": #{
+                    ":inc": dynamodb::dynamo_n(1),
+                },
+            }),
+        ).await?;
+    }
+
+    Ok(())
+}

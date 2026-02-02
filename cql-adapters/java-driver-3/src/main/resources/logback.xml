@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>[%d{yyyy-MM-dd HH:mm:ss}] %level: %logger{36}%n      %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Reduce verbosity of driver internal logging -->
+    <logger name="com.datastax.driver" level="WARN"/>
+    <logger name="io.netty" level="WARN"/>
+
+    <!-- Application logging -->
+    <logger name="com.scylladb.latte" level="INFO"/>
+
+    <root level="INFO">
+        <appender-ref ref="STDOUT"/>
+    </root>
+</configuration>

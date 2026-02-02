@@ -1,0 +1,95 @@
+// Query DynamoDB workload for Latte
+//
+// This workload demonstrates query operations with composite keys.
+//
+// Usage:
+//   latte schema  --dynamodb --dynamodb-endpoint http://localhost:8000 workloads/dynamodb/query_gsi.rn
+//   latte load    --dynamodb --dynamodb-endpoint http://localhost:8000 workloads/dynamodb/query_gsi.rn
+//   latte run     --dynamodb --dynamodb-endpoint http://localhost:8000 workloads/dynamodb/query_gsi.rn
+
+const TABLE_NAME = "latte_query_test";
+const ITEM_COUNT = latte::param!("items", 5000);
+const ITEMS_PER_USER = 10;
+
+pub async fn schema(ctx) {
+    let _ = ctx.delete_table(TABLE_NAME).await;
+
+    // Create table with hash and range key
+    ctx.create_table(
+        TABLE_NAME,
+        [
+            dynamodb::dynamo_key_schema("pk", "HASH"),
+            dynamodb::dynamo_key_schema("sk", "RANGE"),
+        ],
+        [
+            dynamodb::dynamo_attribute_def("pk", "S"),
+            dynamodb::dynamo_attribute_def("sk", "S"),
+        ],
+        Some(dynamodb::dynamo_throughput(100, 100)),
+    ).await?;
+
+    ctx.wait_table_active(TABLE_NAME).await?;
+    Ok(())
+}
+
+pub async fn prepare(ctx) {
+    ctx.load_cycle_count = ITEM_COUNT;
+    Ok(())
+}
+
+pub async fn erase(ctx) {
+    schema(ctx).await?;
+    Ok(())
+}
+
+pub async fn load(ctx, i) {
+    let user_id = i / ITEMS_PER_USER;
+    let item_num = i % ITEMS_PER_USER;
+
+    let item = #{
+        "pk": dynamodb::dynamo_s(format!("user_{:06}", user_id)),
+        "sk": dynamodb::dynamo_s(format!("item_{:04}", item_num)),
+        "value": dynamodb::dynamo_n(i),
+        "data": dynamodb::dynamo_s(format!("Data for item {}", i)),
+    };
+
+    ctx.put_item(TABLE_NAME, item, None).await?;
+    Ok(())
+}
+
+pub async fn run(ctx, i) {
+    let op = latte::hash_range(i, 100);
+    let user_id = latte::hash_range(i + 1, ITEM_COUNT / ITEMS_PER_USER);
+    let pk = format!("user_{:06}", user_id);
+
+    if op < 70 {
+        // 70% - Query by partition key (get all items for a user)
+        ctx.query(
+            TABLE_NAME,
+            "pk = :pk",
+            #{ ":pk": dynamodb::dynamo_s(pk) },
+            None,
+        ).await?;
+    } else if op < 90 {
+        // 20% - Query with sort key prefix
+        ctx.query(
+            TABLE_NAME,
+            "pk = :pk AND begins_with(sk, :prefix)",
+            #{
+                ":pk": dynamodb::dynamo_s(pk),
+                ":prefix": dynamodb::dynamo_s("item_000"),
+            },
+            None,
+        ).await?;
+    } else {
+        // 10% - Get single item
+        let item_num = i % ITEMS_PER_USER;
+        let key = #{
+            "pk": dynamodb::dynamo_s(pk),
+            "sk": dynamodb::dynamo_s(format!("item_{:04}", item_num)),
+        };
+        ctx.get_item(TABLE_NAME, key, None).await?;
+    }
+
+    Ok(())
+}

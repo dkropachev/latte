@@ -10,7 +10,6 @@ use scylla::_macro_internal::ColumnType;
 use scylla::frame::response::result::{CollectionType, ColumnSpec, NativeType};
 use scylla::response::query_result::ColumnSpecs;
 use scylla::value::{CqlDate, CqlDuration, CqlTime, CqlTimeuuid, CqlValue, CqlVarint};
-use std::collections::HashMap;
 use std::net::IpAddr;
 use std::str::FromStr;
 
@@ -70,11 +69,11 @@ fn to_scylla_value(v: &Value, typ: &ColumnType) -> Result<Option<CqlValue>, Box<
         }
         (Value::Integer(v), ColumnType::Native(NativeType::Date)) => match (*v).try_into() {
             Ok(date) => Ok(Some(CqlValue::Date(CqlDate(date)))),
-            Err(_) => Err(Box::new(CassError(CassErrorKind::QueryParamConversion(
+            Err(_) => Err(CassError::boxed_param_error(
                 format!("{v:?}"),
-                "NativeType::Date".to_string(),
+                "NativeType::Date",
                 Some("Invalid date value".to_string()),
-            )))),
+            )),
         },
         (Value::Integer(v), ColumnType::Native(NativeType::Time)) => {
             Ok(Some(CqlValue::Time(CqlTime(*v))))
@@ -124,104 +123,107 @@ fn to_scylla_value(v: &Value, typ: &ColumnType) -> Result<Option<CqlValue>, Box<
                 time_format = format!("{time_format}.%f");
             }
             let naive_time = NaiveTime::parse_from_str(&time_str, &time_format).map_err(|e| {
-                Box::new(CassError(CassErrorKind::QueryParamConversion(
+                CassError::boxed_param_error(
                     format!("{v:?}"),
-                    "NativeType::Time".to_string(),
+                    "NativeType::Time",
                     Some(format!("{e}")),
-                )))
+                )
             })?;
             let cql_time = CqlTime::try_from(naive_time)?;
             Ok(Some(CqlValue::Time(cql_time)))
         }
         (Value::String(s), ColumnType::Native(NativeType::Duration)) => {
-            // TODO: add support for the following 'ISO 8601' format variants:
-            // - ISO 8601 format: P[n]Y[n]M[n]DT[n]H[n]M[n]S or P[n]W
-            // - ISO 8601 alternative format: P[YYYY]-[MM]-[DD]T[hh]:[mm]:[ss]
-            // See: https://opensource.docs.scylladb.com/stable/cql/types.html#working-with-durations
+            // Duration format: Supports human-readable format like "1y2mo3d4h5m6s7ms8us9ns"
+            // Note: ISO 8601 formats (P[n]Y[n]M[n]DT[n]H[n]M[n]S, P[n]W, P[YYYY]-[MM]-[DD]T[hh]:[mm]:[ss])
+            // are not currently supported. See: https://opensource.docs.scylladb.com/stable/cql/types.html#working-with-durations
             let duration_str = s.borrow_ref().unwrap();
             if duration_str.is_empty() {
-                return Err(Box::new(CassError(CassErrorKind::QueryParamConversion(
+                return Err(CassError::boxed_param_error(
                     format!("{v:?}"),
-                    "NativeType::Duration".to_string(),
+                    "NativeType::Duration",
                     Some("Duration cannot be empty".to_string()),
-                ))));
+                ));
             }
             // NOTE: we parse the duration explicitly because of the 'CqlDuration' type specifics.
             // It stores only months, days and nanoseconds.
             // So, we do not translate days to months and hours to days because those are ambiguous
             let (mut months, mut days, mut nanoseconds) = (0, 0, 0);
-            let mut matches_counter = HashMap::from([
-                ("y", 0),
-                ("mo", 0),
-                ("w", 0),
-                ("d", 0),
-                ("h", 0),
-                ("m", 0),
-                ("s", 0),
-                ("ms", 0),
-                ("us", 0),
-                ("ns", 0),
-            ]);
+            // Use fixed-size array instead of HashMap for tracking unit counts
+            // Indices: 0=y, 1=mo, 2=w, 3=d, 4=h, 5=m, 6=s, 7=ms, 8=us, 9=ns
+            const UNIT_Y: usize = 0;
+            const UNIT_MO: usize = 1;
+            const UNIT_W: usize = 2;
+            const UNIT_D: usize = 3;
+            const UNIT_H: usize = 4;
+            const UNIT_M: usize = 5;
+            const UNIT_S: usize = 6;
+            const UNIT_MS: usize = 7;
+            const UNIT_US: usize = 8;
+            const UNIT_NS: usize = 9;
+            const UNIT_NAMES: [&str; 10] = ["y", "mo", "w", "d", "h", "m", "s", "ms", "us", "ns"];
+            let mut unit_counts: [u8; 10] = [0; 10];
+
             for cap in DURATION_REGEX.captures_iter(&duration_str) {
                 if let Some(m) = cap.name("years") {
                     months += m.as_str().parse::<i32>().unwrap() * 12;
-                    *matches_counter.entry("y").or_insert(1) += 1;
+                    unit_counts[UNIT_Y] += 1;
                 } else if let Some(m) = cap.name("months") {
                     months += m.as_str().parse::<i32>().unwrap();
-                    *matches_counter.entry("mo").or_insert(1) += 1;
+                    unit_counts[UNIT_MO] += 1;
                 } else if let Some(m) = cap.name("weeks") {
                     days += m.as_str().parse::<i32>().unwrap() * 7;
-                    *matches_counter.entry("w").or_insert(1) += 1;
+                    unit_counts[UNIT_W] += 1;
                 } else if let Some(m) = cap.name("days") {
                     days += m.as_str().parse::<i32>().unwrap();
-                    *matches_counter.entry("d").or_insert(1) += 1;
+                    unit_counts[UNIT_D] += 1;
                 } else if let Some(m) = cap.name("hours") {
                     nanoseconds += m.as_str().parse::<i64>().unwrap() * 3_600_000_000_000;
-                    *matches_counter.entry("h").or_insert(1) += 1;
+                    unit_counts[UNIT_H] += 1;
                 } else if let Some(m) = cap.name("minutes") {
                     nanoseconds += m.as_str().parse::<i64>().unwrap() * 60_000_000_000;
-                    *matches_counter.entry("m").or_insert(1) += 1;
+                    unit_counts[UNIT_M] += 1;
                 } else if let Some(m) = cap.name("seconds") {
                     nanoseconds += m.as_str().parse::<i64>().unwrap() * 1_000_000_000;
-                    *matches_counter.entry("s").or_insert(1) += 1;
+                    unit_counts[UNIT_S] += 1;
                 } else if let Some(m) = cap.name("millis") {
                     nanoseconds += m.as_str().parse::<i64>().unwrap() * 1_000_000;
-                    *matches_counter.entry("ms").or_insert(1) += 1;
+                    unit_counts[UNIT_MS] += 1;
                 } else if let Some(m) = cap.name("micros") {
                     nanoseconds += m.as_str().parse::<i64>().unwrap() * 1_000;
-                    *matches_counter.entry("us").or_insert(1) += 1;
+                    unit_counts[UNIT_US] += 1;
                 } else if let Some(m) = cap.name("nanoseconds") {
                     nanoseconds += m.as_str().parse::<i64>().unwrap();
-                    *matches_counter.entry("ns").or_insert(1) += 1;
+                    unit_counts[UNIT_NS] += 1;
                 } else if cap.name("invalid").is_some() {
-                    return Err(Box::new(CassError(CassErrorKind::QueryParamConversion(
+                    return Err(CassError::boxed_param_error(
                         format!("{v:?}"),
-                        "NativeType::Duration".to_string(),
+                        "NativeType::Duration",
                         Some("Got invalid duration value".to_string()),
-                    ))));
+                    ));
                 }
             }
-            if matches_counter.values().all(|&v| v == 0) {
-                return Err(Box::new(CassError(CassErrorKind::QueryParamConversion(
+            if unit_counts.iter().all(|&c| c == 0) {
+                return Err(CassError::boxed_param_error(
                     format!("{v:?}"),
-                    "NativeType::Duration".to_string(),
+                    "NativeType::Duration",
                     Some("None time units were found".to_string()),
-                ))));
+                ));
             }
-            let duplicated_units: Vec<&str> = matches_counter
+            let duplicated_units: Vec<&str> = unit_counts
                 .iter()
+                .enumerate()
                 .filter(|&(_, &count)| count > 1)
-                .map(|(&unit, _)| unit)
+                .map(|(idx, _)| UNIT_NAMES[idx])
                 .collect();
             if !duplicated_units.is_empty() {
-                return Err(Box::new(CassError(CassErrorKind::QueryParamConversion(
+                return Err(CassError::boxed_param_error(
                     format!("{v:?}"),
-                    "NativeType::Duration".to_string(),
+                    "NativeType::Duration",
                     Some(format!(
                         "Got multiple matches for time unit(s): {}",
                         duplicated_units.join(", ")
                     )),
-                ))));
+                ));
             }
             let cql_duration = CqlDuration {
                 months,
@@ -234,11 +236,11 @@ fn to_scylla_value(v: &Value, typ: &ColumnType) -> Result<Option<CqlValue>, Box<
         (Value::String(s), ColumnType::Native(NativeType::Varint)) => {
             let varint_str = s.borrow_ref().unwrap();
             if !varint_str.chars().all(|c| c.is_ascii_digit()) {
-                return Err(Box::new(CassError(CassErrorKind::QueryParamConversion(
+                return Err(CassError::boxed_param_error(
                     format!("{v:?}"),
-                    "NativeType::Varint".to_string(),
+                    "NativeType::Varint",
                     Some("Input contains non-digit characters".to_string()),
-                ))));
+                ));
             }
             let byte_vector: Vec<u8> = varint_str
                 .chars()
@@ -253,11 +255,11 @@ fn to_scylla_value(v: &Value, typ: &ColumnType) -> Result<Option<CqlValue>, Box<
             let timeuuid = CqlTimeuuid::from_str(timeuuid_str.as_str());
             match timeuuid {
                 Ok(timeuuid) => Ok(Some(CqlValue::Timeuuid(timeuuid))),
-                Err(e) => Err(Box::new(CassError(CassErrorKind::QueryParamConversion(
+                Err(e) => Err(CassError::boxed_param_error(
                     format!("{v:?}"),
-                    "NativeType::Timeuuid".to_string(),
+                    "NativeType::Timeuuid",
                     Some(format!("{e}")),
-                )))),
+                )),
             }
         }
         (
@@ -271,11 +273,11 @@ fn to_scylla_value(v: &Value, typ: &ColumnType) -> Result<Option<CqlValue>, Box<
             let ipaddr = IpAddr::from_str(ipaddr_str.as_str());
             match ipaddr {
                 Ok(ipaddr) => Ok(Some(CqlValue::Inet(ipaddr))),
-                Err(e) => Err(Box::new(CassError(CassErrorKind::QueryParamConversion(
+                Err(e) => Err(CassError::boxed_param_error(
                     format!("{v:?}"),
-                    "NativeType::Inet".to_string(),
+                    "NativeType::Inet",
                     Some(format!("{e}")),
-                )))),
+                )),
             }
         }
         (Value::String(s), ColumnType::Native(NativeType::Decimal)) => {
@@ -329,11 +331,11 @@ fn to_scylla_value(v: &Value, typ: &ColumnType) -> Result<Option<CqlValue>, Box<
                 .map(|v| {
                     to_scylla_value(v, typ).and_then(|opt| {
                         opt.ok_or_else(|| {
-                            Box::new(CassError(CassErrorKind::QueryParamConversion(
+                            CassError::boxed_param_error(
                                 format!("{v:?}"),
-                                "ColumnType::Vector".to_string(),
+                                "ColumnType::Vector",
                                 None,
-                            )))
+                            )
                         })
                     })
                 })
@@ -354,11 +356,11 @@ fn to_scylla_value(v: &Value, typ: &ColumnType) -> Result<Option<CqlValue>, Box<
                 .map(|v| {
                     to_scylla_value(v, elt).and_then(|opt| {
                         opt.ok_or_else(|| {
-                            Box::new(CassError(CassErrorKind::QueryParamConversion(
+                            CassError::boxed_param_error(
                                 format!("{v:?}"),
-                                "CollectionType::List".to_string(),
+                                "CollectionType::List",
                                 None,
-                            )))
+                            )
                         })
                     })
                 })
@@ -379,11 +381,11 @@ fn to_scylla_value(v: &Value, typ: &ColumnType) -> Result<Option<CqlValue>, Box<
                 .map(|v| {
                     to_scylla_value(v, elt).and_then(|opt| {
                         opt.ok_or_else(|| {
-                            Box::new(CassError(CassErrorKind::QueryParamConversion(
+                            CassError::boxed_param_error(
                                 format!("{v:?}"),
-                                "CollectionType::Set".to_string(),
+                                "CollectionType::Set",
                                 None,
-                            )))
+                            )
                         })
                     })
                 })
@@ -408,11 +410,11 @@ fn to_scylla_value(v: &Value, typ: &ColumnType) -> Result<Option<CqlValue>, Box<
                         map_vec.push((key, value));
                     }
                     _ => {
-                        return Err(Box::new(CassError(CassErrorKind::QueryParamConversion(
+                        return Err(CassError::boxed_param_error(
                             format!("{tuple:?}"),
-                            "CollectionType::Map".to_string(),
+                            "CollectionType::Map",
                             None,
-                        ))));
+                        ));
                     }
                 }
             }
@@ -483,18 +485,18 @@ fn to_scylla_value(v: &Value, typ: &ColumnType) -> Result<Option<CqlValue>, Box<
                 let uuid: &Uuid = obj.downcast_borrow_ref().unwrap();
                 Ok(Some(CqlValue::Uuid(uuid.0)))
             } else {
-                Err(Box::new(CassError(CassErrorKind::QueryParamConversion(
+                Err(CassError::boxed_param_error(
                     format!("{v:?}"),
-                    "NativeType::Uuid".to_string(),
+                    "NativeType::Uuid",
                     None,
-                ))))
+                ))
             }
         }
-        (value, typ) => Err(Box::new(CassError(CassErrorKind::QueryParamConversion(
+        (value, typ) => Err(CassError::boxed_param_error(
             format!("{value:?}"),
-            format!("{typ:?}").to_string(),
+            format!("{typ:?}"),
             None,
-        )))),
+        )),
     }
 }
 
@@ -503,12 +505,9 @@ fn convert_int<T: TryFrom<i64>, R>(
     typ: NativeType,
     f: impl Fn(T) -> R,
 ) -> Result<Option<R>, Box<CassError>> {
-    let converted = value.try_into().map_err(|_| {
-        Box::new(CassError(CassErrorKind::ValueOutOfRange(
-            value.to_string(),
-            format!("{typ:?}").to_string(),
-        )))
-    })?;
+    let converted = value
+        .try_into()
+        .map_err(|_| CassError::boxed_range_error(value.to_string(), format!("{typ:?}")))?;
     Ok(Some(f(converted)))
 }
 

@@ -1,0 +1,135 @@
+// CI/CD Integration Test: Query Operations
+//
+// Tests: create_table (composite key), put_item, query with key conditions
+// Duration: ~10 seconds
+//
+// Usage:
+//   latte schema  --dynamodb --dynamodb-endpoint http://localhost:8000 workloads/dynamodb/cicd/query.rn
+//   latte load    --dynamodb --dynamodb-endpoint http://localhost:8000 workloads/dynamodb/cicd/query.rn
+//   latte run -d 10s --dynamodb --dynamodb-endpoint http://localhost:8000 workloads/dynamodb/cicd/query.rn
+
+const TABLE_NAME = "latte_cicd_query";
+const PARTITION_COUNT = latte::param!("partitions", 100);
+const ITEMS_PER_PARTITION = latte::param!("items_per_partition", 50);
+
+pub async fn schema(ctx) {
+    // Clean up existing table (ignore errors if doesn't exist)
+    let _ = ctx.delete_table(TABLE_NAME).await;
+
+    // Create table with composite key (partition + sort)
+    ctx.create_table(
+        TABLE_NAME,
+        [
+            dynamodb::dynamo_key_schema("pk", "HASH"),
+            dynamodb::dynamo_key_schema("sk", "RANGE"),
+        ],
+        [
+            dynamodb::dynamo_attribute_def("pk", "S"),
+            dynamodb::dynamo_attribute_def("sk", "S"),
+        ],
+        Some(dynamodb::dynamo_throughput(100, 100)),
+    ).await?;
+
+    ctx.wait_table_active(TABLE_NAME).await?;
+    Ok(())
+}
+
+pub async fn prepare(ctx) {
+    ctx.load_cycle_count = PARTITION_COUNT * ITEMS_PER_PARTITION;
+    Ok(())
+}
+
+pub async fn erase(ctx) {
+    schema(ctx).await?;
+    Ok(())
+}
+
+pub async fn load(ctx, i) {
+    let partition_id = i / ITEMS_PER_PARTITION;
+    let item_id = i % ITEMS_PER_PARTITION;
+
+    let pk = format!("partition_{:04}", partition_id);
+    let sk = format!("item_{:04}", item_id);
+
+    let item = #{
+        "pk": dynamodb::dynamo_s(pk),
+        "sk": dynamodb::dynamo_s(sk),
+        "partition_id": dynamodb::dynamo_n(partition_id),
+        "item_id": dynamodb::dynamo_n(item_id),
+        "timestamp": dynamodb::dynamo_n(i * 1000),
+        "data": dynamodb::dynamo_s(format!("data_{}_{}", partition_id, item_id)),
+    };
+
+    ctx.put_item(TABLE_NAME, item, None).await?;
+    Ok(())
+}
+
+pub async fn run(ctx, i) {
+    let op = latte::hash_range(i, 100);
+    let partition_id = latte::hash_range(i, PARTITION_COUNT);
+    let pk = format!("partition_{:04}", partition_id);
+
+    if op < 40 {
+        // 40% - Query all items in partition
+        let items = ctx.query(
+            TABLE_NAME,
+            "pk = :pk",
+            #{ ":pk": dynamodb::dynamo_s(pk) },
+            Some(#{
+                "projection_expression": "pk, sk, #d",
+                "expression_attribute_names": #{ "#d": "data" },
+                "scan_index_forward": true,
+            }),
+        ).await?;
+
+    } else if op < 70 {
+        // 30% - Query with sort key condition (range query)
+        let start_sk = format!("item_{:04}", latte::hash_range(i, ITEMS_PER_PARTITION / 2));
+        let end_sk = format!("item_{:04}", ITEMS_PER_PARTITION - 1);
+
+        let items = ctx.query(
+            TABLE_NAME,
+            "pk = :pk AND sk BETWEEN :start AND :end",
+            #{
+                ":pk": dynamodb::dynamo_s(pk),
+                ":start": dynamodb::dynamo_s(start_sk),
+                ":end": dynamodb::dynamo_s(end_sk),
+            },
+            Some(#{
+                "limit": 10,
+                "scan_index_forward": true,
+            }),
+        ).await?;
+
+    } else if op < 85 {
+        // 15% - Query with filter expression
+        let items = ctx.query(
+            TABLE_NAME,
+            "pk = :pk",
+            #{
+                ":pk": dynamodb::dynamo_s(pk),
+                ":min_id": dynamodb::dynamo_n(ITEMS_PER_PARTITION / 2),
+            },
+            Some(#{
+                "filter_expression": "item_id > :min_id",
+            }),
+        ).await?;
+
+    } else {
+        // 15% - Query descending (reverse order)
+        let items = ctx.query(
+            TABLE_NAME,
+            "pk = :pk",
+            #{ ":pk": dynamodb::dynamo_s(pk) },
+            Some(#{
+                "projection_expression": "sk, #ts",
+                "expression_attribute_names": #{ "#ts": "timestamp" },
+                "limit": 5,
+                "scan_index_forward": false,
+                "consistent_read": true,
+            }),
+        ).await?;
+    }
+
+    Ok(())
+}

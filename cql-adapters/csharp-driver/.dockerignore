@@ -1,0 +1,23 @@
+# Build artifacts
+src/bin/
+src/obj/
+
+# Documentation
+README.md
+TODO.md
+*.md
+
+# Build files
+Makefile
+
+# Test artifacts
+.test.pid
+
+# Git
+.git
+.gitignore
+
+# IDE
+.idea/
+.vscode/
+*.user

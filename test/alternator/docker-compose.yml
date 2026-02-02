@@ -1,0 +1,45 @@
+# Docker Compose configuration for ScyllaDB Alternator integration tests
+# Based on alternator-client-golang test configuration
+
+networks:
+  latte_alternator_network:
+    name: latte_alternator_network
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.99.0.0/16
+
+services:
+  scylla-alternator:
+    image: scylladb/scylla:2025.1
+    container_name: latte-alternator-test
+    networks:
+      latte_alternator_network:
+        ipv4_address: 172.99.0.2
+    command: |
+      --rpc-address 172.99.0.2
+      --listen-address 172.99.0.2
+      --broadcast-address 172.99.0.2
+      --broadcast-rpc-address 172.99.0.2
+      --seeds 172.99.0.2
+      --skip-wait-for-gossip-to-settle 0
+      --ring-delay-ms 0
+      --smp 2
+      --memory 1G
+      --overprovisioned 1
+      --alternator-port 8000
+      --alternator-write-isolation only_rmw_uses_lwt
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:8000 || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    ports:
+      # CQL port
+      - "9043:9042"
+      # Alternator HTTP port
+      - "8000:8000"
+    volumes:
+      - ./scylla.yaml:/etc/scylla/scylla.yaml:ro

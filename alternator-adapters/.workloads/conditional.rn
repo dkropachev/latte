@@ -1,0 +1,160 @@
+// CI/CD Integration Test: Conditional Writes
+//
+// Tests: conditional put_item, conditional update_item, conditional delete_item
+// Duration: ~10 seconds
+//
+// Usage:
+//   latte schema  --dynamodb --dynamodb-endpoint http://localhost:8000 workloads/dynamodb/cicd/conditional.rn
+//   latte load    --dynamodb --dynamodb-endpoint http://localhost:8000 workloads/dynamodb/cicd/conditional.rn
+//   latte run -d 10s --dynamodb --dynamodb-endpoint http://localhost:8000 workloads/dynamodb/cicd/conditional.rn
+
+const TABLE_NAME = "latte_cicd_conditional";
+const ITEM_COUNT = latte::param!("items", 1000);
+
+pub async fn schema(ctx) {
+    // Clean up existing table (ignore errors if doesn't exist)
+    let _ = ctx.delete_table(TABLE_NAME).await;
+
+    ctx.create_table(
+        TABLE_NAME,
+        [dynamodb::dynamo_key_schema("pk", "HASH")],
+        [dynamodb::dynamo_attribute_def("pk", "S")],
+        Some(dynamodb::dynamo_throughput(100, 100)),
+    ).await?;
+
+    ctx.wait_table_active(TABLE_NAME).await?;
+    Ok(())
+}
+
+pub async fn prepare(ctx) {
+    ctx.load_cycle_count = ITEM_COUNT;
+    Ok(())
+}
+
+pub async fn erase(ctx) {
+    schema(ctx).await?;
+    Ok(())
+}
+
+pub async fn load(ctx, i) {
+    let pk = format!("cond_item_{:08}", i);
+
+    let item = #{
+        "pk": dynamodb::dynamo_s(pk),
+        "version": dynamodb::dynamo_n(1),
+        "counter": dynamodb::dynamo_n(0),
+        "data": dynamodb::dynamo_s("initial"),
+        "locked": dynamodb::dynamo_bool(false),
+    };
+
+    ctx.put_item(TABLE_NAME, item, None).await?;
+    Ok(())
+}
+
+pub async fn run(ctx, i) {
+    let op = latte::hash_range(i, 100);
+    let pk = format!("cond_item_{:08}", latte::hash_range(i, ITEM_COUNT));
+    let key = #{ "pk": dynamodb::dynamo_s(pk) };
+
+    if op < 30 {
+        // 30% - Optimistic locking update (version check)
+        // This may fail if another operation updated first - that's expected
+        let current_version = (i % 10) + 1;  // Assume some version
+        let new_version = current_version + 1;
+
+        let result = ctx.update_item(
+            TABLE_NAME,
+            key,
+            Some(#{
+                "update_expression": "SET #v = :newv, #d = :data",
+                "condition_expression": "version = :currv",
+                "expression_attribute_names": #{ "#v": "version", "#d": "data" },
+                "expression_attribute_values": #{
+                    ":newv": dynamodb::dynamo_n(new_version),
+                    ":currv": dynamodb::dynamo_n(current_version),
+                    ":data": dynamodb::dynamo_s(format!("updated_v{}", new_version)),
+                },
+            }),
+        ).await;
+        // ConditionalCheckFailed is expected sometimes
+        if let Err(err) = result {
+            if !err.is_conditional_check_failed() {
+                return Err(err);
+            }
+        }
+
+    } else if op < 50 {
+        // 20% - Conditional put (only if not exists)
+        let new_pk = format!("new_cond_{:08}", i);
+        let item = #{
+            "pk": dynamodb::dynamo_s(new_pk),
+            "version": dynamodb::dynamo_n(1),
+            "counter": dynamodb::dynamo_n(0),
+            "data": dynamodb::dynamo_s("conditionally_created"),
+            "locked": dynamodb::dynamo_bool(false),
+        };
+
+        let result = ctx.put_item(
+            TABLE_NAME,
+            item,
+            Some(#{
+                "condition_expression": "attribute_not_exists(pk)",
+            }),
+        ).await;
+        if let Err(err) = result {
+            if !err.is_conditional_check_failed() {
+                return Err(err);
+            }
+        }
+
+    } else if op < 70 {
+        // 20% - Increment counter only if not locked
+        let result = ctx.update_item(
+            TABLE_NAME,
+            key,
+            Some(#{
+                "update_expression": "SET #c = #c + :inc",
+                "condition_expression": "locked = :unlocked",
+                "expression_attribute_names": #{ "#c": "counter" },
+                "expression_attribute_values": #{
+                    ":inc": dynamodb::dynamo_n(1),
+                    ":unlocked": dynamodb::dynamo_bool(false),
+                },
+            }),
+        ).await;
+        if let Err(err) = result {
+            if !err.is_conditional_check_failed() {
+                return Err(err);
+            }
+        }
+
+    } else if op < 85 {
+        // 15% - Lock/unlock item
+        let should_lock = i % 2 == 0;
+        let expect_locked = !should_lock;
+
+        let result = ctx.update_item(
+            TABLE_NAME,
+            key,
+            Some(#{
+                "update_expression": "SET locked = :new_state",
+                "condition_expression": "locked = :expected",
+                "expression_attribute_values": #{
+                    ":new_state": dynamodb::dynamo_bool(should_lock),
+                    ":expected": dynamodb::dynamo_bool(expect_locked),
+                },
+            }),
+        ).await;
+        if let Err(err) = result {
+            if !err.is_conditional_check_failed() {
+                return Err(err);
+            }
+        }
+
+    } else {
+        // 15% - Regular read (no condition)
+        ctx.get_item(TABLE_NAME, key, Some(#{ "consistent_read": true })).await?;
+    }
+
+    Ok(())
+}

@@ -1,0 +1,203 @@
+//! DynamoDB Collection Data Types Integration Test Workload.
+//!
+//! Tests collection DynamoDB types: List (L), Map (M), String Set (SS), Number Set (NS).
+//!
+//! USAGE:
+//!   latte schema  --dynamodb --dynamodb-endpoint http://localhost:8000 workloads/dynamodb/cicd/collections.rn
+//!   latte load    --dynamodb --dynamodb-endpoint http://localhost:8000 -P items=1000 workloads/dynamodb/cicd/collections.rn
+//!   latte run -d 10s --dynamodb --dynamodb-endpoint http://localhost:8000 -P items=1000 workloads/dynamodb/cicd/collections.rn
+
+// ============================================================================
+// Configuration
+// ============================================================================
+
+const TABLE_NAME = "latte_cicd_collections";
+const ITEM_COUNT = latte::param!("items", 10000);
+
+// ============================================================================
+// Schema
+// ============================================================================
+
+pub async fn schema(ctx) {
+    // Clean up existing table (ignore errors if doesn't exist)
+    let _ = ctx.delete_table(TABLE_NAME).await;
+
+    ctx.create_table(
+        TABLE_NAME,
+        [dynamodb::dynamo_key_schema("pk", "HASH")],
+        [dynamodb::dynamo_attribute_def("pk", "S")],
+        Some(dynamodb::dynamo_throughput(100, 100)),
+    ).await?;
+
+    ctx.wait_table_active(TABLE_NAME).await?;
+    Ok(())
+}
+
+pub async fn prepare(ctx) {
+    ctx.load_cycle_count = ITEM_COUNT;
+    Ok(())
+}
+
+pub async fn erase(ctx) {
+    schema(ctx).await?;
+    Ok(())
+}
+
+// ============================================================================
+// Load
+// ============================================================================
+
+pub async fn load(ctx, i) {
+    let idx = i % ITEM_COUNT;
+    let pk = format!("coll_{:08}", idx);
+
+    let item = #{
+        "pk": dynamodb::dynamo_s(pk),
+    };
+
+    // List of strings
+    if idx % 17 != 0 {
+        item["col_list_string"] = dynamodb::dynamo_l([
+            dynamodb::dynamo_s(format!("item_{}_{}", idx, 0)),
+            dynamodb::dynamo_s(format!("item_{}_{}", idx, 1)),
+            dynamodb::dynamo_s(format!("item_{}_{}", idx, 2)),
+        ]);
+    }
+
+    // List of numbers
+    if idx % 19 != 0 {
+        item["col_list_number"] = dynamodb::dynamo_l([
+            dynamodb::dynamo_n(latte::hash_range(idx, 1000)),
+            dynamodb::dynamo_n(latte::hash_range(idx + 1, 1000)),
+            dynamodb::dynamo_n(latte::hash_range(idx + 2, 1000)),
+        ]);
+    }
+
+    // List of mixed types with variable size
+    if idx % 21 != 0 {
+        let list_size = (idx % 5) + 2;  // 2-6 elements
+        let mixed_list = [];
+        for j in 0..list_size {
+            if j % 2 == 0 {
+                mixed_list.push(dynamodb::dynamo_s(format!("str_{}", j)));
+            } else {
+                mixed_list.push(dynamodb::dynamo_n(j * 100));
+            }
+        }
+        item["col_list_mixed"] = dynamodb::dynamo_l(mixed_list);
+    }
+
+    // Map with string values
+    if idx % 23 != 0 {
+        item["col_map_string"] = dynamodb::dynamo_m(#{
+            "key_a": dynamodb::dynamo_s(format!("val_{}_{}", idx, "a")),
+            "key_b": dynamodb::dynamo_s(format!("val_{}_{}", idx, "b")),
+            "key_c": dynamodb::dynamo_s(format!("val_{}_{}", idx, "c")),
+        });
+    }
+
+    // Map with number values
+    if idx % 29 != 0 {
+        item["col_map_number"] = dynamodb::dynamo_m(#{
+            "count": dynamodb::dynamo_n(latte::hash_range(idx, 10000)),
+            "score": dynamodb::dynamo_n(latte::hash_range(idx + 1, 100)),
+            "rank": dynamodb::dynamo_n(idx % 1000),
+        });
+    }
+
+    // Map with mixed value types
+    if idx % 31 != 0 {
+        item["col_map_mixed"] = dynamodb::dynamo_m(#{
+            "username": dynamodb::dynamo_s(format!("user_{}", idx)),
+            "active": dynamodb::dynamo_bool(idx % 2 == 0),
+            "level": dynamodb::dynamo_n(idx % 100),
+        });
+    }
+
+    // String Set
+    if idx % 37 != 0 {
+        item["col_ss"] = dynamodb::dynamo_ss([
+            format!("tag_{}", idx % 10),
+            format!("tag_{}", (idx + 3) % 10),
+            format!("tag_{}", (idx + 7) % 10),
+        ]);
+    }
+
+    // Number Set
+    if idx % 41 != 0 {
+        item["col_ns"] = dynamodb::dynamo_ns([
+            idx % 100,
+            (idx + 33) % 100,
+            (idx + 67) % 100,
+        ]);
+    }
+
+    ctx.put_item(TABLE_NAME, item, None).await?;
+    Ok(())
+}
+
+// ============================================================================
+// Run
+// ============================================================================
+
+pub async fn run(ctx, i) {
+    let op = latte::hash_range(i, 100);
+    let idx = latte::hash_range(i, ITEM_COUNT);
+    let pk = format!("coll_{:08}", idx);
+
+    if op < 60 {
+        // 60% - GetItem by primary key
+        let key = #{
+            "pk": dynamodb::dynamo_s(pk),
+        };
+        let result = ctx.get_item(TABLE_NAME, key, None).await?;
+
+        // Verify we got the item
+        if result != None {
+            assert!(result.contains_key("pk"), "Item should have pk field");
+        }
+
+    } else if op < 80 {
+        // 20% - PutItem with collections
+        let item = #{
+            "pk": dynamodb::dynamo_s(pk),
+        };
+
+        // Add list of strings
+        if idx % 17 != 0 {
+            item["col_list_string"] = dynamodb::dynamo_l([
+                dynamodb::dynamo_s(format!("item_{}_{}", idx, 0)),
+                dynamodb::dynamo_s(format!("item_{}_{}", idx, 1)),
+                dynamodb::dynamo_s(format!("item_{}_{}", idx, 2)),
+            ]);
+        }
+
+        // Add map with string values
+        if idx % 23 != 0 {
+            item["col_map_string"] = dynamodb::dynamo_m(#{
+                "key_a": dynamodb::dynamo_s(format!("val_{}_{}", idx, "a")),
+                "key_b": dynamodb::dynamo_s(format!("val_{}_{}", idx, "b")),
+                "key_c": dynamodb::dynamo_s(format!("val_{}_{}", idx, "c")),
+            });
+        }
+
+        ctx.put_item(TABLE_NAME, item, None).await?;
+
+    } else {
+        // 20% - Scan with projection on collection fields
+        let items = ctx.scan(
+            TABLE_NAME,
+            Some(#{
+                "projection_expression": "pk, col_list_string, col_map_string",
+                "limit": 10,
+            }),
+        ).await?;
+
+        // Verify scan returns items
+        for item in items {
+            assert!(item.contains_key("pk"), "Scanned item should have pk");
+        }
+    }
+
+    Ok(())
+}

@@ -10,6 +10,7 @@ pub mod cass_error;
 pub mod connect;
 pub mod context;
 mod cql_types;
+pub mod dynamodb;
 mod functions;
 
 #[derive(RustEmbed)]
@@ -55,7 +56,10 @@ fn try_install(
     uuid_module.function_meta(cql_types::Uuid::string_display)?;
 
     let mut latte_module = Module::with_crate("latte")?;
-    latte_module.macro_("param", move |ctx, ts| functions::param(ctx, &params, ts))?;
+    let params_for_macro = params.clone();
+    latte_module.macro_("param", move |ctx, ts| {
+        functions::param(ctx, &params_for_macro, ts)
+    })?;
 
     latte_module.function_meta(functions::blob)?;
     latte_module.function_meta(functions::text)?;
@@ -102,6 +106,9 @@ fn try_install(
     rune_ctx.install(&latte_module)?;
     rune_ctx.install(&fs_module)?;
     rune_ctx.install(&iter_module)?;
+
+    // Install DynamoDB module for Alternator/DynamoDB workloads
+    dynamodb::install(rune_ctx, &params)?;
 
     Ok(())
 }

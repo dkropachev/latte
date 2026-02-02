@@ -11,8 +11,11 @@ use crate::config::ValidationStrategy;
 use crate::error::LatteError;
 use crate::scripting::cass_error::{CassError, CassErrorKind};
 use crate::scripting::context::{handle_retry_error, Context};
+use crate::scripting::dynamodb::context::DynamoContext;
+use crate::scripting::dynamodb::DynamoError;
 use crate::stats::latency::LatencyDistributionRecorder;
 use crate::stats::session::SessionStats;
+use parking_lot::Mutex;
 use rand::distributions::{Distribution, WeightedIndex};
 use rand::rngs::SmallRng;
 use rand::{Rng, SeedableRng};
@@ -23,7 +26,6 @@ use rune::runtime::{AnyObj, Args, RuntimeContext, Shared, VmError, VmResult};
 use rune::termcolor::{ColorChoice, StandardStream};
 use rune::{vm_try, Any, Diagnostics, Source, Sources, ToValue, Unit, Value, Vm};
 use serde::{Deserialize, Serialize};
-use try_lock::TryLock;
 
 /// Wraps a reference to Session that can be converted to a Rune `Value`
 /// and passed as one of `Args` arguments to a function.
@@ -37,16 +39,30 @@ impl SessionRef<'_> {
     }
 }
 
-/// We need this to be able to pass a reference to `Session` as an argument
-/// to Rune function.
+/// Converts a `SessionRef` to a Rune `Value` for passing to Rune functions.
 ///
-/// Caution! Be careful using this trait. Undefined Behaviour possible.
-/// This is unsound - it is theoretically
-/// possible that the underlying `Session` gets dropped before the `Value` produced by this trait
-/// implementation and the compiler is not going to catch that.
-/// The receiver of a `Value` must ensure that it is dropped before `Session`!
+/// # Safety Concerns
+///
+/// This implementation uses `unsafe { AnyObj::from_ref() }` which bypasses Rust's borrow checker.
+/// This is technically unsound because the compiler cannot verify that the referenced `Context`
+/// outlives the `Value` produced.
+///
+/// ## Why This Is Safe In Practice
+///
+/// The invariants that make this safe are enforced at the call sites:
+/// 1. `SessionRef` is only created and used within single function calls in `Workload` methods
+///    (`call_run`, `call_load`, `call_prepare`, `call_schema`, `call_erase`)
+/// 2. The Rune VM executes synchronously and the `Value` is consumed within the same scope
+/// 3. The `Context` is owned by `Workload` and outlives all Rune function calls
+/// 4. No `Value` containing a reference escapes the function scope
+///
+/// The caller MUST ensure that:
+/// - The `Value` is not stored beyond the Rune function call
+/// - The `Context` reference remains valid for the entire duration of the VM execution
 impl ToValue for SessionRef<'_> {
     fn to_value(self) -> VmResult<Value> {
+        // SAFETY: The caller guarantees that `self.context` outlives the returned `Value`.
+        // See the Safety Concerns section above for invariants.
         let obj = unsafe { AnyObj::from_ref(self.context) };
         VmResult::Ok(Value::from(vm_try!(Shared::new(obj))))
     }
@@ -64,9 +80,70 @@ impl ContextRefMut<'_> {
     }
 }
 
-/// Caution! See `impl ToValue for SessionRef`.
+/// Converts a mutable `ContextRefMut` to a Rune `Value` for passing to Rune functions.
+///
+/// # Safety
+///
+/// See `impl ToValue for SessionRef` for the full safety analysis. The same invariants apply:
+/// the caller must ensure the `Context` outlives the `Value` and no `Value` escapes the call scope.
 impl ToValue for ContextRefMut<'_> {
     fn to_value(self) -> VmResult<Value> {
+        // SAFETY: The caller guarantees that `self.context` outlives the returned `Value`.
+        // See `impl ToValue for SessionRef` for invariants.
+        let obj = unsafe { AnyObj::from_mut(self.context) };
+        VmResult::Ok(Value::from(vm_try!(Shared::new(obj))))
+    }
+}
+
+/// Wraps a reference to DynamoContext that can be converted to a Rune `Value`
+/// and passed as one of `Args` arguments to a function.
+struct DynamoSessionRef<'a> {
+    context: &'a DynamoContext,
+}
+
+impl DynamoSessionRef<'_> {
+    pub fn new(context: &DynamoContext) -> DynamoSessionRef<'_> {
+        DynamoSessionRef { context }
+    }
+}
+
+/// Converts a `DynamoSessionRef` to a Rune `Value` for passing to Rune functions.
+///
+/// # Safety
+///
+/// See `impl ToValue for SessionRef` for the full safety analysis. The same invariants apply:
+/// the caller must ensure the `DynamoContext` outlives the `Value` and no `Value` escapes the call scope.
+impl ToValue for DynamoSessionRef<'_> {
+    fn to_value(self) -> VmResult<Value> {
+        // SAFETY: The caller guarantees that `self.context` outlives the returned `Value`.
+        // See `impl ToValue for SessionRef` for invariants.
+        let obj = unsafe { AnyObj::from_ref(self.context) };
+        VmResult::Ok(Value::from(vm_try!(Shared::new(obj))))
+    }
+}
+
+/// Wraps a mutable reference to DynamoContext that can be converted to a Rune `Value`
+/// and passed as one of `Args` arguments to a function.
+struct DynamoContextRefMut<'a> {
+    context: &'a mut DynamoContext,
+}
+
+impl DynamoContextRefMut<'_> {
+    pub fn new(context: &mut DynamoContext) -> DynamoContextRefMut<'_> {
+        DynamoContextRefMut { context }
+    }
+}
+
+/// Converts a mutable `DynamoContextRefMut` to a Rune `Value` for passing to Rune functions.
+///
+/// # Safety
+///
+/// See `impl ToValue for SessionRef` for the full safety analysis. The same invariants apply:
+/// the caller must ensure the `DynamoContext` outlives the `Value` and no `Value` escapes the call scope.
+impl ToValue for DynamoContextRefMut<'_> {
+    fn to_value(self) -> VmResult<Value> {
+        // SAFETY: The caller guarantees that `self.context` outlives the returned `Value`.
+        // See `impl ToValue for SessionRef` for invariants.
         let obj = unsafe { AnyObj::from_mut(self.context) };
         VmResult::Ok(Value::from(vm_try!(Shared::new(obj))))
     }
@@ -206,6 +283,14 @@ impl Program {
                         return Err(LatteError::Cassandra(Box::new(e)));
                     }
 
+                    if e.borrow_ref().unwrap().type_hash() == DynamoError::type_hash() {
+                        let e = e.take_downcast::<DynamoError>().unwrap();
+                        return Err(LatteError::FunctionResult(
+                            function_name.to_string(),
+                            format!("{}", e),
+                        ));
+                    }
+
                     let e = Value::Any(e);
                     let msg = self.vm().with(|| format!("{e:?}"));
                     Err(LatteError::FunctionResult(function_name.to_string(), msg))
@@ -283,6 +368,32 @@ impl Program {
     /// Typically used to remove the data from the database before running the benchmark.
     pub async fn erase(&mut self, context: &mut Context) -> Result<(), LatteError> {
         let context = ContextRefMut::new(context);
+        self.async_call(&FnRef::new(ERASE_FN), (context,)).await?;
+        Ok(())
+    }
+
+    // ==================== DynamoDB Variants ====================
+
+    /// Calls the script's `prepare` function with a DynamoDB context.
+    pub async fn prepare_dynamodb(
+        &mut self,
+        context: &mut DynamoContext,
+    ) -> Result<(), LatteError> {
+        let context = DynamoContextRefMut::new(context);
+        self.async_call(&FnRef::new(PREPARE_FN), (context,)).await?;
+        Ok(())
+    }
+
+    /// Calls the script's `schema` function with a DynamoDB context.
+    pub async fn schema_dynamodb(&mut self, context: &mut DynamoContext) -> Result<(), LatteError> {
+        let context = DynamoContextRefMut::new(context);
+        self.async_call(&FnRef::new(SCHEMA_FN), (context,)).await?;
+        Ok(())
+    }
+
+    /// Calls the script's `erase` function with a DynamoDB context.
+    pub async fn erase_dynamodb(&mut self, context: &mut DynamoContext) -> Result<(), LatteError> {
+        let context = DynamoContextRefMut::new(context);
         self.async_call(&FnRef::new(ERASE_FN), (context,)).await?;
         Ok(())
     }
@@ -416,7 +527,7 @@ pub struct Workload {
     context: Context,
     program: Program,
     router: FunctionRouter,
-    state: TryLock<FnStatsCollector>,
+    state: Mutex<FnStatsCollector>,
 }
 
 impl Workload {
@@ -426,7 +537,7 @@ impl Workload {
             context,
             program,
             router: FunctionRouter::new(functions),
-            state: TryLock::new(state),
+            state: Mutex::new(state),
         }
     }
 
@@ -436,9 +547,7 @@ impl Workload {
             // make a deep copy to avoid congestion on Arc ref counts used heavily by Rune
             program: self.program.unshare(),
             router: self.router.clone(),
-            state: TryLock::new(FnStatsCollector::new(
-                self.state.try_lock().unwrap().functions(),
-            )),
+            state: Mutex::new(FnStatsCollector::new(self.state.lock().functions())),
         })
     }
 
@@ -451,8 +560,13 @@ impl Workload {
         cycle: i64,
         scheduled_time: Instant,
     ) -> Result<(i64, Instant), LatteError> {
-        let mut rng = SmallRng::seed_from_u64(cycle as u64);
-        let function = self.router.select(&mut rng);
+        // Fast path: skip RNG creation when there's only one function
+        let function = if self.router.is_single_function() {
+            self.router.get_single()
+        } else {
+            let mut rng = SmallRng::seed_from_u64(cycle as u64);
+            self.router.select(&mut rng)
+        };
         let mut current_retries_counter = 0;
         let mut end_time = Instant::now();
         let mut is_ok = false;
@@ -463,11 +577,12 @@ impl Workload {
             //       to be able to run additional retry-related async context functions.
             {
                 let context = SessionRef::new(&self.context);
-                // TODO: calculate 2nd metric using 'start_time'?
-                // let start_time = Instant::now();
+                // Note: Currently we measure duration from scheduled_time to end_time,
+                // which includes scheduling delay. Measuring from start_time would give
+                // pure execution time, but this is not currently tracked as a separate metric.
                 let result = self.program.async_call(function, (context, cycle)).await;
                 end_time = Instant::now();
-                let mut state = self.state.try_lock().unwrap();
+                let mut state = self.state.lock();
                 let duration = end_time - scheduled_time;
 
                 match result {
@@ -534,14 +649,109 @@ impl Workload {
     /// Needed for producing `WorkloadStats` with
     /// recorded start and end times of measurement.
     pub fn reset(&self, start_time: Instant) {
-        self.state.try_lock().unwrap().reset(start_time);
+        self.state.lock().reset(start_time);
         self.context.reset();
     }
 
     /// Returns statistics of the operations invoked by this workload so far.
     /// Resets the internal statistic counters.
     pub fn take_stats(&self, end_time: Instant) -> WorkloadStats {
-        let state = self.state.try_lock().unwrap().take(end_time);
+        let state = self.state.lock().take(end_time);
+        let result = WorkloadStats {
+            start_time: state.start_time,
+            end_time,
+            function_stats: state.fn_stats.clone(),
+            session_stats: self.context().take_session_stats(),
+        };
+        result
+    }
+}
+
+/// DynamoDB-specific workload executor.
+/// Mirrors the `Workload` struct but works with `DynamoContext` instead of `Context`.
+pub struct DynamoWorkload {
+    context: DynamoContext,
+    program: Program,
+    router: FunctionRouter,
+    state: Mutex<FnStatsCollector>,
+}
+
+impl DynamoWorkload {
+    pub fn new(
+        context: DynamoContext,
+        program: Program,
+        functions: &[(FnRef, f64)],
+    ) -> DynamoWorkload {
+        let state = FnStatsCollector::new(functions.iter().map(|x| x.0.clone()));
+        DynamoWorkload {
+            context,
+            program,
+            router: FunctionRouter::new(functions),
+            state: Mutex::new(state),
+        }
+    }
+
+    pub fn clone(&self) -> Result<Self, LatteError> {
+        Ok(DynamoWorkload {
+            context: self.context.clone_for_thread().map_err(|e| {
+                LatteError::Configuration(format!("Failed to clone DynamoDB context: {}", e))
+            })?,
+            // make a deep copy to avoid congestion on Arc ref counts used heavily by Rune
+            program: self.program.unshare(),
+            router: self.router.clone(),
+            state: Mutex::new(FnStatsCollector::new(self.state.lock().functions())),
+        })
+    }
+
+    /// Executes a single cycle of a workload.
+    /// This should be idempotent –
+    /// the generated action should be a function of the iteration number.
+    /// Returns the cycle number and the end time of the query.
+    pub async fn run(
+        &self,
+        cycle: i64,
+        scheduled_time: Instant,
+    ) -> Result<(i64, Instant), LatteError> {
+        // Fast path: skip RNG creation when there's only one function
+        let function = if self.router.is_single_function() {
+            self.router.get_single()
+        } else {
+            let mut rng = SmallRng::seed_from_u64(cycle as u64);
+            self.router.select(&mut rng)
+        };
+        let context = DynamoSessionRef::new(&self.context);
+        let result = self.program.async_call(function, (context, cycle)).await;
+        let end_time = Instant::now();
+        let mut state = self.state.lock();
+        let duration = end_time - scheduled_time;
+
+        match result {
+            Ok(_) => {
+                state.operation_completed(function, duration);
+                Ok((cycle, end_time))
+            }
+            Err(e) => {
+                state.operation_failed(function, duration);
+                Err(e)
+            }
+        }
+    }
+
+    /// Returns the reference to the contained context.
+    pub fn context(&self) -> &DynamoContext {
+        &self.context
+    }
+
+    /// Sets the workload start time and resets the counters.
+    pub fn reset(&self, start_time: Instant) {
+        self.state.lock().reset(start_time);
+        self.context.reset();
+    }
+
+    /// Returns statistics of the operations invoked by this workload so far.
+    /// Resets the internal statistic counters.
+    pub fn take_stats(&self, end_time: Instant) -> WorkloadStats {
+        let state = self.state.lock().take(end_time);
         let result = WorkloadStats {
             start_time: state.start_time,
             end_time,
@@ -568,6 +778,19 @@ impl FunctionRouter {
         }
     }
 
+    /// Returns true if there's only one function, allowing callers to skip RNG creation.
+    #[inline]
+    pub fn is_single_function(&self) -> bool {
+        self.functions.len() == 1
+    }
+
+    /// Get the single function (only valid when is_single_function() returns true).
+    #[inline]
+    pub fn get_single(&self) -> &FnRef {
+        &self.functions[0]
+    }
+
+    #[inline]
     pub fn select(&self, rng: &mut impl Rng) -> &FnRef {
         &self.functions[self.selector.sample(rng)]
     }

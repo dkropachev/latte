@@ -1,0 +1,148 @@
+//! DynamoDB Primitive Data Types Integration Test Workload.
+//!
+//! Tests primitive DynamoDB types: String (S), Number (N), Binary (B), Boolean (BOOL).
+//!
+//! USAGE:
+//!   latte schema  --dynamodb --dynamodb-endpoint http://localhost:8000 workloads/dynamodb/cicd/primitives.rn
+//!   latte load    --dynamodb --dynamodb-endpoint http://localhost:8000 -P items=1000 workloads/dynamodb/cicd/primitives.rn
+//!   latte run -d 10s --dynamodb --dynamodb-endpoint http://localhost:8000 -P items=1000 workloads/dynamodb/cicd/primitives.rn
+
+// ============================================================================
+// Configuration
+// ============================================================================
+
+const TABLE_NAME = "latte_cicd_primitives";
+const ITEM_COUNT = latte::param!("items", 10000);
+
+// ============================================================================
+// Schema
+// ============================================================================
+
+pub async fn schema(ctx) {
+    // Clean up existing table (ignore errors if doesn't exist)
+    let _ = ctx.delete_table(TABLE_NAME).await;
+
+    ctx.create_table(
+        TABLE_NAME,
+        [dynamodb::dynamo_key_schema("pk", "HASH")],
+        [dynamodb::dynamo_attribute_def("pk", "S")],
+        Some(dynamodb::dynamo_throughput(100, 100)),
+    ).await?;
+
+    ctx.wait_table_active(TABLE_NAME).await?;
+    Ok(())
+}
+
+pub async fn prepare(ctx) {
+    ctx.load_cycle_count = ITEM_COUNT;
+    Ok(())
+}
+
+pub async fn erase(ctx) {
+    schema(ctx).await?;
+    Ok(())
+}
+
+// ============================================================================
+// Load
+// ============================================================================
+
+pub async fn load(ctx, i) {
+    let idx = i % ITEM_COUNT;
+    let pk = format!("prim_{:08}", idx);
+    let mult = if idx % 2 == 0 { -1 } else { 1 };
+
+    let item = #{
+        "pk": dynamodb::dynamo_s(pk),
+    };
+
+    // String types - various lengths and patterns
+    if idx % 17 != 0 {
+        item["col_string_short"] = dynamodb::dynamo_s(format!("short_{}", idx));
+    }
+    if idx % 19 != 0 {
+        item["col_string_long"] = dynamodb::dynamo_s(latte::text(idx, latte::hash_range(idx, 200) + 50));
+    }
+    if idx % 21 != 0 {
+        item["col_string_unicode"] = dynamodb::dynamo_s(format!("unicode_test_{}_{}", idx, idx * 2));
+    }
+
+    // Number types - integers and decimals
+    if idx % 23 != 0 {
+        item["col_number_int"] = dynamodb::dynamo_n(latte::hash_range(idx, 2147483647) * mult);
+    }
+    if idx % 29 != 0 {
+        item["col_number_bigint"] = dynamodb::dynamo_n(latte::hash(idx) * mult);
+    }
+    if idx % 11 != 0 {
+        // DynamoDB numbers are stored as strings, so we format with precision
+        item["col_number_float"] = dynamodb::dynamo_s(format!("{}.{}", latte::hash_range(idx, 99999), latte::hash_range(idx + 1, 999999)));
+    }
+    if idx % 13 != 0 {
+        item["col_number_negative"] = dynamodb::dynamo_n(-1 * latte::hash_range(idx, 1000000));
+    }
+    if idx % 31 != 0 {
+        item["col_number_zero"] = dynamodb::dynamo_n(0);
+    }
+
+    // Boolean types
+    if idx % 41 != 0 {
+        item["col_bool_true"] = dynamodb::dynamo_bool(true);
+    }
+    if idx % 43 != 0 {
+        item["col_bool_false"] = dynamodb::dynamo_bool(false);
+    }
+    if idx % 47 != 0 {
+        item["col_bool_alternating"] = dynamodb::dynamo_bool(idx % 2 == 0);
+    }
+
+    ctx.put_item(TABLE_NAME, item, None).await?;
+    Ok(())
+}
+
+// ============================================================================
+// Run
+// ============================================================================
+
+pub async fn run(ctx, i) {
+    let op = latte::hash_range(i, 100);
+    let idx = latte::hash_range(i, ITEM_COUNT);
+    let pk = format!("prim_{:08}", idx);
+
+    if op < 70 {
+        // 70% - GetItem by primary key
+        let key = #{
+            "pk": dynamodb::dynamo_s(pk),
+        };
+        let result = ctx.get_item(TABLE_NAME, key, None).await?;
+
+        // Verify we got the item (it should exist if loaded)
+        if result != None {
+            // Verify pk matches
+            assert!(result.contains_key("pk"), "Item should have pk field");
+        }
+
+    } else {
+        // 30% - PutItem (update existing)
+        let mult = if idx % 2 == 0 { -1 } else { 1 };
+
+        let item = #{
+            "pk": dynamodb::dynamo_s(pk),
+        };
+
+        // Add a subset of attributes for the update
+        if idx % 17 != 0 {
+            item["col_string_short"] = dynamodb::dynamo_s(format!("short_{}", idx));
+        }
+        if idx % 23 != 0 {
+            item["col_number_int"] = dynamodb::dynamo_n(latte::hash_range(idx, 2147483647) * mult);
+        }
+        if idx % 47 != 0 {
+            item["col_bool_alternating"] = dynamodb::dynamo_bool(idx % 2 == 0);
+        }
+
+        ctx.put_item(TABLE_NAME, item, None).await?;
+    }
+
+    Ok(())
+}
